@@ -1,4 +1,5 @@
-FROM registry.svc.ci.openshift.org/ocp/4.0:base-router
+FROM centos:7
+#FROM registry.svc.ci.openshift.org/ocp/4.0:base-router
 RUN INSTALL_PKGS="haproxy20 rsyslog sysvinit-tools" && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \

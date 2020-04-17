@@ -30,7 +30,7 @@ all: build
 build:
 	$(GO_BUILD_RECIPE)
 
-images/router/*/Dockerfile: images/router/base/Dockerfile
+images/router/*/Dockerfile: build
 	imagebuilder -t registry.svc.ci.openshift.org/openshift/origin-v4.0:`basename $(@D)`-router -f images/router/`basename $(@D)`/Dockerfile .
 
 images/router/*/Dockerfile.rhel: images/router/base/Dockerfile.rhel
