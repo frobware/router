@@ -455,11 +455,7 @@ backend {{genBackendNamePrefix $cfg.TLSTermination}}:{{$cfgIdx}}
     {{- if ge $weight 0 }}{{/* weight=0 is reasonable to keep existing connections to backends with cookies as we can see the HTTP headers */}}
       {{- with $serviceUnit := index $.ServiceUnits $serviceUnitName }}
         {{- range $idx, $endpoint := processEndpointsForAlias $cfg $serviceUnit (env "ROUTER_BACKEND_PROCESS_ENDPOINTS" "") }}
-	  {{- if isTrue (index $cfg.Annotations "haproxy.router.openshift.io/enable-h2c") }}
-  server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} cookie {{$endpoint.IdHash}} weight {{$weight}} proto h2
-          {{- else }}
-  server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} cookie {{$endpoint.IdHash}} weight {{$weight}} alpn h2,http/1.1
-          {{- end }}
+  server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} cookie {{$endpoint.IdHash}} weight {{$weight}}
           {{- if (eq $cfg.TLSTermination "reencrypt") }} ssl
             {{- if $cfg.VerifyServiceHostname }} verifyhost {{ $serviceUnit.Hostname }}
             {{- end }}
@@ -469,7 +465,7 @@ backend {{genBackendNamePrefix $cfg.TLSTermination}}:{{$cfgIdx}}
               {{- else }} verify none
               {{- end }}
             {{- end }}
-
+	    {{- if gt (len $cfg.Certificates) 0 }} alpn h2,http/1.1 {{- end }}
           {{- else if or (eq $cfg.TLSTermination "") (eq $cfg.TLSTermination "edge") }}
           {{- end }}{{/* end type specific options*/}}
 
@@ -556,7 +552,11 @@ backend {{genBackendNamePrefix $cfg.TLSTermination}}:{{$cfgIdx}}
       {{- if ne $weight 0 }}{{/* drop connections where weight=0 as we can't use cookies, leaving only r-r and src-ip as dispatch methods and weight make no sense there */}}
         {{- with $serviceUnit := index $.ServiceUnits $serviceUnitName }}
           {{- range $idx, $endpoint := processEndpointsForAlias $cfg $serviceUnit (env "ROUTER_BACKEND_PROCESS_ENDPOINTS" "") }}
+	    {{- if gt (len $cfg.Certificates) 0 }}
   server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} weight {{$weight}} alpn h2,http/1.1
+            {{- else }}
+  server {{$endpoint.ID}} {{$endpoint.IP}}:{{$endpoint.Port}} weight {{$weight}}
+            {{- end }}
             {{- if and (not $endpoint.NoHealthCheck) (gt $cfg.ActiveEndpoints 1) }} check inter {{firstMatch $timeSpecPattern (index $cfg.Annotations "router.openshift.io/haproxy.health.check.interval") (env "ROUTER_BACKEND_CHECK_INTERVAL") "5000ms"}}
             {{- end }}{{/* end else no health check */}}
             {{- with $podMaxConn := index $cfg.Annotations "haproxy.router.openshift.io/pod-concurrent-connections" }}
