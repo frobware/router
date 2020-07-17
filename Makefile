@@ -5,9 +5,7 @@ MAIN_PACKAGE=$(PACKAGE)/cmd/openshift-router
 
 BIN=$(lastword $(subst /, ,$(MAIN_PACKAGE)))
 
-ifneq ($(DELVE),)
 GO_GCFLAGS ?= -gcflags=all="-N -l"
-endif
 
 SOURCE_GIT_TAG ?=$(shell git describe --long --tags --abbrev=7 --match 'v[0-9]*' 2>/dev/null || echo 'v0.0.0-unknown')
 SOURCE_GIT_COMMIT ?=$(shell git rev-parse --short "HEAD^{commit}" 2>/dev/null)
@@ -20,7 +18,7 @@ define version-ldflags
 -X $(1).buildDate="$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 endef
 GO_LD_EXTRAFLAGS ?=
-GO_LDFLAGS ?=-ldflags "-s -w $(call version-ldflags,$(PACKAGE)/pkg/version) $(GO_LD_EXTRAFLAGS)"
+GO_LDFLAGS ?=-ldflags "$(call version-ldflags,$(PACKAGE)/pkg/version) $(GO_LD_EXTRAFLAGS)"
 
 GO=GO111MODULE=on GOFLAGS=-mod=vendor go
 GO_BUILD_RECIPE=CGO_ENABLED=0 $(GO) build -o $(BIN) $(GO_GCFLAGS) $(GO_LDFLAGS) $(MAIN_PACKAGE)
@@ -43,3 +41,17 @@ check:
 verify:
 	hack/verify-gofmt.sh
 	hack/verify-deps.sh
+
+new-dev-image: build
+	imagebuilder -t frobware/openshift-router-endpointslices:latest -f images/router/haproxy/Dockerfile .
+
+push-dev-image:
+	docker push frobware/openshift-router-endpointslices:latest
+
+set-dev-image:
+	oc -n openshift-cluster-version scale --replicas 0 deployments/cluster-version-operator
+	oc -n openshift-ingress-operator scale --replicas 0 deployments ingress-operator
+	oc -n openshift-ingress scale --replicas=0 deployment/router-default
+	sleep 1
+	oc -n openshift-ingress set image deployment/router-default router=frobware/openshift-router-endpointslices:latest
+	oc -n openshift-ingress scale --replicas=1 deployment/router-default

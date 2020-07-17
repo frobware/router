@@ -1,8 +1,6 @@
 package endpointsubset
 
 import (
-	"encoding/json"
-	"fmt"
 	"sort"
 
 	kapi "k8s.io/api/core/v1"
@@ -79,19 +77,4 @@ func EndpointAddressDefaultSortFields() []EndpointAddressLessFunc {
 
 func SortAddresses(addresses []kapi.EndpointAddress, comparators []EndpointAddressLessFunc) {
 	NewEndpointAddressOrderBy(comparators...).Sort(addresses)
-}
-
-func FlattenEndpointSubsetToJSON(subset kapi.EndpointSubset) []string {
-	data, _ := json.Marshal(subset)
-	fmt.Println(string(data))
-
-	var x []string
-
-	for i := range subset.Addresses {
-		for j := range subset.Ports {
-			x = append(x, fmt.Sprintf("%s:%v", subset.Addresses[i].IP, subset.Ports[j].Port))
-		}
-	}
-
-	return x
 }
