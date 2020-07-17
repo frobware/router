@@ -1,5 +1,9 @@
-FROM registry.svc.ci.openshift.org/openshift/origin-v4.0:base-router
-RUN INSTALL_PKGS="haproxy20 rsyslog sysvinit-tools" && \
+FROM centos:7
+USER root
+RUN yum install -y https://github.com/frobware/haproxy-hacks/raw/master/RPMs/rhaos-4.5-rhel-7-build-haproxy20-2.0.14-1.el7.x86_64.rpm
+RUN haproxy -vv
+
+RUN INSTALL_PKGS="procps-ng socat rsyslog sysvinit-tools" && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum clean all && \
@@ -10,12 +14,15 @@ RUN INSTALL_PKGS="haproxy20 rsyslog sysvinit-tools" && \
     chown -R :0 /var/lib/haproxy && \
     chmod -R g+w /var/lib/haproxy
 COPY images/router/haproxy/ /var/lib/haproxy/
+COPY dlv /usr/bin/dlv
+COPY openshift-router /usr/bin/openshift-router
 LABEL io.k8s.display-name="OpenShift HAProxy Router" \
       io.k8s.description="This component offers ingress to an OpenShift cluster via Ingress and Route rules." \
       io.openshift.tags="openshift,router,haproxy"
 USER 1001
-EXPOSE 80 443
+EXPOSE 80 443 7000
 WORKDIR /var/lib/haproxy/conf
-ENV TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template \
+ENV XDG_CONFIG_HOME=/tmp \
+    TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template \
     RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy
-ENTRYPOINT ["/usr/bin/openshift-router", "--v=2"]
+ENTRYPOINT ["/usr/bin/dlv", "exec", "--log", "--api-version=2", "--headless", "--accept-multiclient", "--continue", "--listen=:7000", "/usr/bin/openshift-router", "--", "--v=4"]
