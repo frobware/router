@@ -7,6 +7,7 @@ import (
 	"time"
 
 	kapi "k8s.io/api/core/v1"
+	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -227,6 +228,59 @@ func (c *RouterController) HandleEndpoints(eventType watch.EventType, obj interf
 	c.Commit()
 }
 
+// HandleEndpointSlice handles a single EndpointSlice event and refreshes the router backend.
+func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMeta metav1.ObjectMeta, items []discoveryv1beta1.EndpointSlice) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	var subsets []kapi.EndpointSubset
+
+	for i := range items {
+		var ports []kapi.EndpointPort
+		var addresses []kapi.EndpointAddress
+
+		for j := range items[i].Endpoints {
+			for k := range items[i].Endpoints[j].Addresses {
+				epa := kapi.EndpointAddress{
+					IP:        items[i].Endpoints[j].Addresses[k],
+					TargetRef: items[i].Endpoints[j].TargetRef,
+				}
+				if items[i].Endpoints[j].Hostname != nil {
+					epa.Hostname = *items[i].Endpoints[j].Hostname
+				}
+				addresses = append(addresses, epa)
+			}
+		}
+
+		for j := range items[i].Ports {
+			ports = append(ports, convertEndpointPort(items[i].Ports[j]))
+		}
+
+		subsets = append(subsets, kapi.EndpointSubset{
+			Addresses: addresses,
+			Ports:     ports,
+		})
+	}
+
+	endpoints := &kapi.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            objMeta.Name,
+			Namespace:       objMeta.Namespace,
+			Labels:          objMeta.Labels,
+			Annotations:     objMeta.Annotations,
+			OwnerReferences: objMeta.OwnerReferences,
+			ClusterName:     objMeta.ClusterName,
+		},
+		Subsets: subsets,
+	}
+
+	c.RecordNamespaceEndpoints(eventType, endpoints)
+	if err := c.Plugin.HandleEndpoints(eventType, endpoints); err != nil {
+		utilruntime.HandleError(err)
+	}
+	c.Commit()
+}
+
 // Commit notifies the plugin that it is safe to commit state.
 func (c *RouterController) Commit() {
 	if c.firstSyncDone {
@@ -253,4 +307,20 @@ func (c *RouterController) handleFirstSync() {
 	c.firstSyncDone = true
 	log.V(4).Info("router first sync complete")
 	c.Commit()
+}
+
+func convertEndpointPort(p discoveryv1beta1.EndpointPort) kapi.EndpointPort {
+	endpointPort := kapi.EndpointPort{
+		AppProtocol: p.AppProtocol,
+	}
+	if p.Name != nil {
+		endpointPort.Name = *p.Name
+	}
+	if p.Port != nil {
+		endpointPort.Port = *p.Port
+	}
+	if p.Protocol != nil {
+		endpointPort.Protocol = *p.Protocol
+	}
+	return endpointPort
 }
