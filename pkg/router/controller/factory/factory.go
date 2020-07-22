@@ -106,6 +106,10 @@ func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool) 
 	return rc
 }
 
+func fubar(x reflect.Type) {
+	utilruntime.HandleError(fmt.Errorf("%q informer died", x.Name()))
+}
+
 func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterController) {
 	if f.NamespaceLabels != nil {
 		f.createNamespacesSharedInformer()
@@ -122,9 +126,13 @@ func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterContr
 	}
 
 	// Start informers
-	for _, informer := range f.informers {
-		go informer.Run(utilwait.NeverStop)
+	for t, informer := range f.informers {
+		go func(x reflect.Type, i kcache.SharedIndexInformer) {
+			i.Run(utilwait.NeverStop)
+			fubar(x)
+		}(t, informer)
 	}
+
 	// Wait for informers cache to be synced
 	for objType, informer := range f.informers {
 		if !kcache.WaitForCacheSync(utilwait.NeverStop, informer.HasSynced) {
