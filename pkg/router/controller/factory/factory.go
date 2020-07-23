@@ -151,7 +151,7 @@ func (f *RouterControllerFactory) registerInformerEventHandlers(rc *routercontro
 		f.registerSharedInformerEventHandlers(&discoveryv1beta1.EndpointSlice{}, func(eventType watch.EventType, obj interface{}) {
 			eps := obj.(*discoveryv1beta1.EndpointSlice)
 			if serviceName := endpointSliceServiceName(eps); serviceName == "" {
-				utilruntime.HandleError(fmt.Errorf("EndpointSlice %s/%s has no %q label", eps.Namespace, eps.Name, ServiceNameLabel))
+				log.V(4).Info("EndpointSlice has no service name", "namespace", eps.Namespace, "name", eps.Name, "label", ServiceNameLabel)
 			} else {
 				objMeta := eps.ObjectMeta.DeepCopy()
 				objMeta.Name = serviceName
@@ -221,7 +221,7 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 		for _, item := range f.informerStoreList(&discoveryv1beta1.EndpointSlice{}) {
 			eps := item.(*discoveryv1beta1.EndpointSlice)
 			if serviceName := endpointSliceServiceName(eps); serviceName == "" {
-				utilruntime.HandleError(fmt.Errorf("EndpointSlice %s/%s has no %q label", eps.Namespace, eps.Name, ServiceNameLabel))
+				log.V(4).Info("EndpointSlice has no service name", "namespace", eps.Namespace, "name", eps.Name, "label", ServiceNameLabel)
 			} else {
 				objMeta := eps.ObjectMeta.DeepCopy()
 				objMeta.Name = serviceName
