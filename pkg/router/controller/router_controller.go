@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 	projectclient "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	logf "github.com/openshift/router/log"
 	"github.com/openshift/router/pkg/router"
+	"github.com/openshift/router/pkg/router/controller/endpointsubset"
 )
 
 var log = logf.Logger.WithName("controller")
@@ -235,6 +237,9 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 
 	var subsets []kapi.EndpointSubset
 
+	endpointAddressOrderByFields := endpointsubset.EndpointAddressDefaultSortFields()
+	endpointPortOrderByFields := endpointsubset.EndpointPortDefaultSortFields()
+
 	for i := range items {
 		var ports []kapi.EndpointPort
 		var addresses []kapi.EndpointAddress
@@ -256,10 +261,21 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 			ports = append(ports, convertEndpointPort(items[i].Ports[j]))
 		}
 
+		endpointsubset.SortAddresses(addresses, endpointAddressOrderByFields)
+		endpointsubset.SortPorts(ports, endpointPortOrderByFields)
+
 		subsets = append(subsets, kapi.EndpointSubset{
 			Addresses: addresses,
 			Ports:     ports,
 		})
+	}
+
+	// TODO(frobware) How much do we need to sort?
+	// TODO(frobware) Should we sort by the whole struct or by individual named fields?
+	// TODO(frobware) And... Do we actually need to sort at all?
+	err := endpointsubset.SortEndpointSubsets(subsets)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("failed to sort endpoint subsets: %v", err))
 	}
 
 	endpoints := &kapi.Endpoints{
@@ -273,6 +289,9 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 		},
 		Subsets: subsets,
 	}
+
+	data, _ := json.MarshalIndent(endpoints, "", "\n")
+	fmt.Println(string(data))
 
 	c.RecordNamespaceEndpoints(eventType, endpoints)
 	if err := c.Plugin.HandleEndpoints(eventType, endpoints); err != nil {
