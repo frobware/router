@@ -6,7 +6,10 @@ import (
 	"sync"
 	"time"
 
+	routev1 "github.com/openshift/api/route/v1"
+	projectclient "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	kapi "k8s.io/api/core/v1"
+	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -14,10 +17,9 @@ import (
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 
-	routev1 "github.com/openshift/api/route/v1"
-	projectclient "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	logf "github.com/openshift/router/log"
 	"github.com/openshift/router/pkg/router"
+	"github.com/openshift/router/pkg/router/controller/endpointsubset"
 )
 
 var log = logf.Logger.WithName("controller")
@@ -219,6 +221,76 @@ func (c *RouterController) HandleEndpoints(eventType watch.EventType, obj interf
 	endpoints := obj.(*kapi.Endpoints)
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	c.RecordNamespaceEndpoints(eventType, endpoints)
+	if err := c.Plugin.HandleEndpoints(eventType, endpoints); err != nil {
+		utilruntime.HandleError(err)
+	}
+	c.Commit()
+}
+
+// HandleEndpointSlice handles a single EndpointSlice event and refreshes the router backend.
+func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMeta metav1.ObjectMeta, items []discoveryv1beta1.EndpointSlice) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	subsets := make([]kapi.EndpointSubset, len(items))
+	for i := range items {
+		for j := range items[i].Endpoints {
+			if len(subsets[i].Addresses) == 0 && len(items[i].Endpoints[j].Addresses) > 0 {
+				subsets[i].Addresses = make([]kapi.EndpointAddress, len(items[i].Endpoints[j].Addresses))
+			}
+			for k := range items[i].Endpoints[j].Addresses {
+				subsets[i].Addresses[k].IP = items[i].Endpoints[j].Addresses[k]
+				subsets[i].Addresses[k].TargetRef = items[i].Endpoints[j].TargetRef
+				if items[i].Endpoints[j].Hostname != nil {
+					subsets[i].Addresses[k].Hostname = *items[i].Endpoints[j].Hostname
+				}
+			}
+		}
+
+		if len(items[i].Ports) > 0 {
+			subsets[i].Ports = make([]kapi.EndpointPort, len(items[i].Ports))
+		}
+
+		for j := range items[i].Ports {
+			if items[i].Ports[j].Name != nil {
+				subsets[i].Ports[j].Name = *items[i].Ports[j].Name
+			}
+			if items[i].Ports[j].Port != nil {
+				subsets[i].Ports[j].Port = *items[i].Ports[j].Port
+			}
+			if items[i].Ports[j].Protocol != nil {
+				subsets[i].Ports[j].Protocol = *items[i].Ports[j].Protocol
+			}
+			subsets[i].Ports[j].AppProtocol = items[i].Ports[j].AppProtocol
+		}
+
+		endpointsubset.SortPorts(subsets[i].Ports)
+		endpointsubset.SortAddresses(subsets[i].Addresses)
+	}
+
+	endpoints := &kapi.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            objMeta.Name,
+			Namespace:       objMeta.Namespace,
+			Labels:          objMeta.Labels,
+			Annotations:     objMeta.Annotations,
+			OwnerReferences: objMeta.OwnerReferences,
+			ClusterName:     objMeta.ClusterName,
+		},
+		Subsets: subsets,
+	}
+
+	// RecordNamespaceEndpoints and all HandleEndpoints
+	// implementations treat watch.Modified and watch.Added the
+	// same, so we can conflate watch.Modified and watch.Added
+	// here
+	if len(items) == 0 {
+		eventType = watch.Deleted
+	} else {
+		eventType = watch.Modified
+	}
 
 	c.RecordNamespaceEndpoints(eventType, endpoints)
 	if err := c.Plugin.HandleEndpoints(eventType, endpoints); err != nil {
