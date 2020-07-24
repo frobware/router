@@ -270,6 +270,23 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 		endpointsubset.SortAddresses(subsets[i].Addresses)
 	}
 
+	// TODO(frobware): delete this when we get one clean CI run
+	fmt.Printf("********** EndPoints: %s/%s\n", objMeta.Namespace, objMeta.Name)
+	for i := range subsets {
+		for j := range subsets[i].Addresses {
+			for k := range subsets[i].Ports {
+				fmt.Printf("N=%v -- IP=%v HOSTNAME=%v PORT=%v PROTOCOL=%v NAME=%v\n",
+					i,
+					subsets[i].Addresses[j].IP,
+					subsets[i].Addresses[j].Hostname,
+					subsets[i].Ports[k].Port,
+					subsets[i].Ports[k].Protocol,
+					subsets[i].Ports[k].Name)
+			}
+		}
+	}
+	fmt.Println()
+
 	endpoints := &kapi.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            objMeta.Name,
