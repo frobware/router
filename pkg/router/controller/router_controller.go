@@ -234,40 +234,47 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	subsets := make([]kapi.EndpointSubset, len(items))
+	var subsets []kapi.EndpointSubset
 	for i := range items {
-		for j := range items[i].Endpoints {
-			if len(subsets[i].Addresses) == 0 && len(items[i].Endpoints[j].Addresses) > 0 {
-				subsets[i].Addresses = make([]kapi.EndpointAddress, len(items[i].Endpoints[j].Addresses))
-			}
-			for k := range items[i].Endpoints[j].Addresses {
-				subsets[i].Addresses[k].IP = items[i].Endpoints[j].Addresses[k]
-				subsets[i].Addresses[k].TargetRef = items[i].Endpoints[j].TargetRef
-				if items[i].Endpoints[j].Hostname != nil {
-					subsets[i].Addresses[k].Hostname = *items[i].Endpoints[j].Hostname
-				}
-			}
-		}
+		var ports []kapi.EndpointPort
+		var addresses []kapi.EndpointAddress
 
-		if len(items[i].Ports) > 0 {
-			subsets[i].Ports = make([]kapi.EndpointPort, len(items[i].Ports))
+		for j := range items[i].Endpoints {
+			for k := range items[i].Endpoints[j].Addresses {
+				epa := kapi.EndpointAddress{
+					IP:        items[i].Endpoints[j].Addresses[k],
+					TargetRef: items[i].Endpoints[j].TargetRef,
+				}
+				if items[i].Endpoints[j].Hostname != nil {
+					epa.Hostname = *items[i].Endpoints[j].Hostname
+				}
+				addresses = append(addresses, epa)
+			}
 		}
 
 		for j := range items[i].Ports {
+			endpointPort := kapi.EndpointPort{
+				AppProtocol: items[i].Ports[j].AppProtocol,
+			}
 			if items[i].Ports[j].Name != nil {
-				subsets[i].Ports[j].Name = *items[i].Ports[j].Name
+				endpointPort.Name = *items[i].Ports[j].Name
 			}
 			if items[i].Ports[j].Port != nil {
-				subsets[i].Ports[j].Port = *items[i].Ports[j].Port
+				endpointPort.Port = *items[i].Ports[j].Port
 			}
 			if items[i].Ports[j].Protocol != nil {
-				subsets[i].Ports[j].Protocol = *items[i].Ports[j].Protocol
+				endpointPort.Protocol = *items[i].Ports[j].Protocol
 			}
-			subsets[i].Ports[j].AppProtocol = items[i].Ports[j].AppProtocol
+			ports = append(ports, endpointPort)
 		}
 
-		endpointsubset.SortPorts(subsets[i].Ports)
-		endpointsubset.SortAddresses(subsets[i].Addresses)
+		endpointsubset.SortAddresses(addresses)
+		endpointsubset.SortPorts(ports)
+
+		subsets = append(subsets, kapi.EndpointSubset{
+			Addresses: addresses,
+			Ports:     ports,
+		})
 	}
 
 	// TODO(frobware): delete this when we get one clean CI run
