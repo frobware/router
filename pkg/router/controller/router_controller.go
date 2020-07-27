@@ -310,11 +310,11 @@ func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMet
 	// implementations treat watch.Modified and watch.Added the
 	// same, so we can conflate watch.Modified and watch.Added
 	// here
-	// if len(items) == 0 {
-	// 	eventType = watch.Deleted
-	// } else {
-	// 	eventType = watch.Modified
-	// }
+	if len(items) == 0 {
+		eventType = watch.Deleted
+	} else {
+		eventType = watch.Modified
+	}
 
 	c.RecordNamespaceEndpoints(eventType, endpoints)
 	if err := c.Plugin.HandleEndpoints(eventType, endpoints); err != nil {
