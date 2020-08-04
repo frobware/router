@@ -23,7 +23,6 @@ import (
 
 	logf "github.com/openshift/router/log"
 	"github.com/openshift/router/pkg/router/controller"
-	controllerfactory "github.com/openshift/router/pkg/router/controller/factory"
 )
 
 var log = logf.Logger.WithName("router")
@@ -79,7 +78,7 @@ func (o *RouterSelection) Bind(flag *pflag.FlagSet) {
 	flag.StringVar(&o.RouterName, "name", env("ROUTER_SERVICE_NAME", "public"), "The name the router will identify itself with in the route status")
 	flag.StringVar(&o.RouterCanonicalHostname, "router-canonical-hostname", env("ROUTER_CANONICAL_HOSTNAME", ""), "CanonicalHostname is the external host name for the router that can be used as a CNAME for the host requested for this route. This value is optional and may not be set in all cases.")
 	flag.BoolVar(&o.UpdateStatus, "update-status", isTrue(env("ROUTER_UPDATE_STATUS", "true")), "If true, the router will update admitted route status.")
-	flag.DurationVar(&o.ResyncInterval, "resync-interval", controllerfactory.DefaultResyncInterval, "The interval at which the route list should be fully refreshed")
+	flag.DurationVar(&o.ResyncInterval, "resync-interval", controller.DefaultResyncInterval, "The interval at which the route list should be fully refreshed")
 	flag.StringVar(&o.HostnameTemplate, "hostname-template", env("ROUTER_SUBDOMAIN", ""), "If specified, a template that should be used to generate the hostname for a route without spec.host (e.g. '${name}-${namespace}.myapps.mycompany.com')")
 	flag.BoolVar(&o.OverrideHostname, "override-hostname", isTrue(env("ROUTER_OVERRIDE_HOSTNAME", "")), "Override the spec.host value for a route with --hostname-template")
 	flag.StringSliceVar(&o.OverrideDomains, "override-domains", envVarAsStrings("ROUTER_OVERRIDE_DOMAINS", "", ","), "List of comma separated domains to override if present in any routes. This overrides the spec.host value in any matching routes with --hostname-template")
@@ -243,8 +242,8 @@ func (o *RouterSelection) Complete() error {
 }
 
 // NewFactory initializes a factory that will watch the requested routes
-func (o *RouterSelection) NewFactory(routeclient routeclientset.Interface, projectclient projectclient.ProjectInterface, kc kclientset.Interface) *controllerfactory.RouterControllerFactory {
-	factory := controllerfactory.NewDefaultRouterControllerFactory(routeclient, projectclient, kc, o.WatchEndpoints)
+func (o *RouterSelection) NewFactory(routeclient routeclientset.Interface, projectclient projectclient.ProjectInterface, kc kclientset.Interface) *controller.RouterControllerFactory {
+	factory := controller.NewDefaultRouterControllerFactory(routeclient, projectclient, kc, o.WatchEndpoints)
 	factory.LabelSelector = o.LabelSelector
 	factory.FieldSelector = o.FieldSelector
 	factory.Namespace = o.Namespace
