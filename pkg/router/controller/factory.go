@@ -1,4 +1,4 @@
-package factory
+package controller
 
 import (
 	"context"
@@ -26,10 +26,7 @@ import (
 	informerfactory "k8s.io/client-go/informers"
 
 	"github.com/openshift/router/pkg/router"
-	routercontroller "github.com/openshift/router/pkg/router/controller"
 	"github.com/openshift/router/pkg/router/routeapihelpers"
-
-	logf "github.com/openshift/router/log"
 )
 
 const (
@@ -37,8 +34,6 @@ const (
 	ServiceNameLabel      = "kubernetes.io/service-name"
 	ServiceNameIndex      = "service-name"
 )
-
-var log = logf.Logger.WithName("controller_factory")
 
 // RouterControllerFactory initializes and manages the watches that drive a router
 // controller. It supports optional scoping on Namespace, Labels, and Fields of routes.
@@ -76,8 +71,8 @@ func NewDefaultRouterControllerFactory(rc routeclientset.Interface, pc projectcl
 
 // Create begins listing and watching against the API server for the desired route and endpoint
 // resources. It spawns child goroutines that cannot be terminated.
-func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool) *routercontroller.RouterController {
-	rc := &routercontroller.RouterController{
+func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool) *RouterController {
+	rc := &RouterController{
 		Plugin:     plugin,
 		WatchNodes: watchNodes,
 
@@ -106,7 +101,7 @@ func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool) 
 	return rc
 }
 
-func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterController) {
+func (f *RouterControllerFactory) initInformers(rc *RouterController) {
 	if f.NamespaceLabels != nil {
 		f.createNamespacesSharedInformer()
 	}
@@ -134,7 +129,7 @@ func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterContr
 	}
 }
 
-func (f *RouterControllerFactory) registerInformerEventHandlers(rc *routercontroller.RouterController) {
+func (f *RouterControllerFactory) registerInformerEventHandlers(rc *RouterController) {
 	if f.NamespaceLabels != nil {
 		f.registerSharedInformerEventHandlers(&kapi.Namespace{}, rc.HandleNamespace)
 	}
@@ -194,7 +189,7 @@ func (f *RouterControllerFactory) informerStoreList(obj runtime.Object) []interf
 // - Fetch existing items from informers cache and process manually
 // - Perform first router sync
 // - Register informer event handlers for new updates and resyncs
-func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.RouterController) {
+func (f *RouterControllerFactory) processExistingItems(rc *RouterController) {
 	if f.NamespaceLabels != nil {
 		items := f.informerStoreList(&kapi.Namespace{})
 		if len(items) == 0 {
