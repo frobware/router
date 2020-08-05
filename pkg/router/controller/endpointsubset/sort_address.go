@@ -89,9 +89,8 @@ func DefaultEndpointAddressOrderByFuncs() []EndpointAddressLessFunc {
 	}
 }
 
-func SortAddresses(addresses []kapi.EndpointAddress, orderByFuncs ...EndpointAddressLessFunc) {
-	if len(orderByFuncs) == 0 {
-		orderByFuncs = DefaultEndpointAddressOrderByFuncs()
+func SortAddresses(addresses []kapi.EndpointAddress, orderByFuncs []EndpointAddressLessFunc) {
+	if len(orderByFuncs) > 0 {
+		newEndpointAddressOrderBy(orderByFuncs...).Sort(addresses)
 	}
-	newEndpointAddressOrderBy(orderByFuncs...).Sort(addresses)
 }

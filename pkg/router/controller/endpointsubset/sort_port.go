@@ -96,9 +96,8 @@ func DefaultEndpointPortOrderByFuncs() []EndpointPortLessFunc {
 	}
 }
 
-func SortPorts(ports []kapi.EndpointPort, orderByFuncs ...EndpointPortLessFunc) {
-	if len(orderByFuncs) == 0 {
-		orderByFuncs = DefaultEndpointPortOrderByFuncs()
+func SortPorts(ports []kapi.EndpointPort, orderByFuncs []EndpointPortLessFunc) {
+	if len(orderByFuncs) > 0 {
+		endpointPortOrderBy(orderByFuncs...).Sort(ports)
 	}
-	endpointPortOrderBy(orderByFuncs...).Sort(ports)
 }
