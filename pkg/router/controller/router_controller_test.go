@@ -41,15 +41,15 @@ type endpointSlicesTestPlugin struct {
 var _ router.Plugin = (*endpointSlicesTestPlugin)(nil)
 
 func (p *endpointSlicesTestPlugin) HandleRoute(watch.EventType, *routev1.Route) error {
-	panic("should not be called")
+	panic("unexpected call")
 }
 
 func (p *endpointSlicesTestPlugin) HandleNamespaces(sets.String) error {
-	panic("should not be called")
+	panic("unexpected call")
 }
 
 func (p *endpointSlicesTestPlugin) HandleNode(watch.EventType, *kapi.Node) error {
-	panic("should not be called")
+	panic("unexpected call")
 }
 
 func (p *endpointSlicesTestPlugin) HandleEndpoints(eventType watch.EventType, endpoints *kapi.Endpoints) error {
@@ -92,7 +92,7 @@ func NewEndpointSlicesTestPlugin(channelSize int) *endpointSlicesTestPlugin {
 	}
 }
 
-func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...runtime.Object) (*fakekubeclient.Clientset, *RouterController) {
+func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...runtime.Object) (*fakekubeclient.Clientset, *RouterController, chan struct{}) {
 	client := fakekubeclient.NewSimpleClientset(initialObjects...)
 
 	factory := NewDefaultRouterControllerFactory(
@@ -101,9 +101,6 @@ func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...run
 		client,
 		false,
 	)
-
-	return client, factory.Create(plugin, false)
-}
 
 	stopCh := make(chan struct{})
 
@@ -157,6 +154,8 @@ func int32Ptr(i int32) *int32 {
 // stringPtr returns a pointer to the passed string.
 func stringPtr(s string) *string {
 	return &s
+}
+
 // protocolPtr returns a pointer to the passed protocol.
 func protocolPtr(p kapi.Protocol) *kapi.Protocol {
 	return &p
@@ -218,44 +217,8 @@ func TestEndpointSlicesInitialSync(t *testing.T) {
 	}
 }
 
-// Sort functions should be the inverse of
-// endpointsubset.DefaultEndpointAddressOrderByFuncs()
-func testEndpointAddressOrderByFuncs() []endpointsubset.EndpointAddressLessFunc {
-	ip := func(x, y *kapi.EndpointAddress) bool {
-		return !endpointsubset.EndpointAddressIPLessFn(x, y)
-	}
-
-	hostname := func(x, y *kapi.EndpointAddress) bool {
-		return !endpointsubset.EndpointAddressHostnameLessFn(x, y)
-	}
-
-	return []endpointsubset.EndpointAddressLessFunc{
-		ip,
-		hostname,
-	}
-}
-
-// Sort functions should be the inverse of
-// endpointsubset.DefaultEndpointPortOrderByFuncs()
-func testEndpointPortOrderByFuncs() []endpointsubset.EndpointPortLessFunc {
-	port := func(x, y *kapi.EndpointPort) bool {
-		return !endpointsubset.EndpointPortPortNumberLessFn(x, y)
-	}
-
-	protocol := func(x, y *kapi.EndpointPort) bool {
-		return !endpointsubset.EndpointPortProtocolLessFn(x, y)
-	}
-
-	name := func(x, y *kapi.EndpointPort) bool {
-		return !endpointsubset.EndpointPortNameLessFn(x, y)
-	}
-
-	return []endpointsubset.EndpointPortLessFunc{
-		port,
-		protocol,
-		name,
-	}
-}
+func TestEndpointSlicesAggregation(t *testing.T) {
+	defer leaktest.CheckTimeout(t, endpointSliceTestTimeout)()
 
 	endpointSlices := []discoveryv1beta1.EndpointSlice{{
 		ObjectMeta: metav1.ObjectMeta{
@@ -432,6 +395,4 @@ func testEndpointPortOrderByFuncs() []endpointsubset.EndpointPortLessFunc {
 			}
 		})
 	}
-}
-
 }
