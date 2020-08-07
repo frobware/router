@@ -169,6 +169,11 @@ func aggregateEndpointSlice(informer kcache.SharedIndexInformer, namespace, serv
 		fullSet[i] = *eps.DeepCopy()
 	}
 
+	// Make guarantees for all receivers/consumers.
+	sort.SliceStable(fullSet, func(i, j int) bool {
+		return path.Join(fullSet[i].Namespace, fullSet[i].Name) < path.Join(fullSet[j].Namespace, fullSet[j].Name)
+	})
+
 	return fullSet
 }
 
