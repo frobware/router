@@ -3,8 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"path"
-	"sort"
 	"sync"
 	"time"
 
@@ -288,10 +286,6 @@ func (c *RouterController) handleFirstSync() {
 
 func convertEndpointSliceToEndpointSubset(items []discoveryv1beta1.EndpointSlice, addressOrderByFuncs []endpointsubset.EndpointAddressLessFunc, portOrderByFuncs []endpointsubset.EndpointPortLessFunc) []kapi.EndpointSubset {
 	var subsets []kapi.EndpointSubset
-
-	sort.SliceStable(items, func(i, j int) bool {
-		return path.Join(items[i].Namespace, items[i].Name) < path.Join(items[j].Namespace, items[j].Name)
-	})
 
 	for i := range items {
 		var ports []kapi.EndpointPort

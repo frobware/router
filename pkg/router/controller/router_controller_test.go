@@ -16,8 +16,6 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	fakeproject "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1/fake"
 	fakerouterclient "github.com/openshift/client-go/route/clientset/versioned/fake"
-	"github.com/openshift/router/pkg/router"
-	"github.com/openshift/router/pkg/router/controller/endpointsubset"
 	kapi "k8s.io/api/core/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,64 +23,40 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/watch"
 	fakekubeclient "k8s.io/client-go/kubernetes/fake"
+
+	"github.com/openshift/router/pkg/router"
+	"github.com/openshift/router/pkg/router/controller/endpointsubset"
 )
 
-const unitTestTimeout = 15 * time.Second
-
-func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...runtime.Object) (*fakekubeclient.Clientset, *RouterController) {
-	client := fakekubeclient.NewSimpleClientset(initialObjects...)
-
-	factory := NewDefaultRouterControllerFactory(
-		fakerouterclient.NewSimpleClientset(),
-		&fakeproject.FakeProjects{},
-		client,
-		false,
-	)
-
 const endpointSliceTestTimeout = 1 * time.Minute
-}
-
-// panicPlugin implements router.Plugin and is provided for
-// embeddeding. By default all functions will call panic().
-type panicPlugin struct{}
-
-// Ensure panicPlugin is a router.Plugin.
-var _ router.Plugin = (*panicPlugin)(nil)
-
-func (p *panicPlugin) HandleRoute(eventType watch.EventType, route *routev1.Route) error {
-	panic("should never be called; customize via type embedding")
-}
-
-func (p *panicPlugin) HandleEndpoints(eventType watch.EventType, endpoints *kapi.Endpoints) error {
-	panic("should never be called; customize via type embedding")
-}
-
-func (p *panicPlugin) HandleNamespaces(namespaces sets.String) error {
-	panic("unexpected call")
-}
-
-func (p *panicPlugin) HandleNode(eventType watch.EventType, node *kapi.Node) error {
-	panic("unexpected call")
-}
-
-func (p *panicPlugin) Commit() error {
-	panic("unexpected call")
-}
 
 type endpointSlicesTestPlugin struct {
 	commitCalled  chan struct{}
 	commitCount   uint64
 	lastEventType watch.EventType
 	endpoints     map[string]kapi.Endpoints
+}
 
-	panicPlugin
+// Ensure endpointSlicesTestPlugin is a router.Plugin.
+var _ router.Plugin = (*endpointSlicesTestPlugin)(nil)
+
+func (p *endpointSlicesTestPlugin) HandleRoute(watch.EventType, *routev1.Route) error {
+	panic("should not be called")
+}
+
+func (p *endpointSlicesTestPlugin) HandleNamespaces(sets.String) error {
+	panic("should not be called")
+}
+
+func (p *endpointSlicesTestPlugin) HandleNode(watch.EventType, *kapi.Node) error {
+	panic("should not be called")
 }
 
 func (p *endpointSlicesTestPlugin) HandleEndpoints(eventType watch.EventType, endpoints *kapi.Endpoints) error {
 	if eventType == watch.Deleted {
 		delete(p.endpoints, path.Join(endpoints.Namespace, endpoints.Name))
 	} else {
-		p.endpoints[path.Join(endpoints.Namespace, endpoints.Name)] = *endpoints.DeepCopy()
+		p.endpoints[path.Join(endpoints.Namespace, endpoints.Name)] = *endpoints
 	}
 
 	p.lastEventType = eventType
@@ -118,11 +92,19 @@ func NewEndpointSlicesTestPlugin(channelSize int) *endpointSlicesTestPlugin {
 	}
 }
 
-func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...runtime.Object) (*fakekubeclient.Clientset, *RouterController, chan struct{}) {
-	stopCh := make(chan struct{})
+func newEndpointSlicesTestController(plugin router.Plugin, initialObjects ...runtime.Object) (*fakekubeclient.Clientset, *RouterController) {
+	client := fakekubeclient.NewSimpleClientset(initialObjects...)
 
-	return client, factory.Create(plugin, false, stopCh), stopCh
-func TestEndpointSlicesInitialSync(t *testing.T) {
+	factory := NewDefaultRouterControllerFactory(
+		fakerouterclient.NewSimpleClientset(),
+		&fakeproject.FakeProjects{},
+		client,
+		false,
+	)
+
+	return client, factory.Create(plugin, false)
+}
+
 	stopCh := make(chan struct{})
 
 	return client, factory.Create(plugin, false, stopCh), stopCh
@@ -236,8 +218,44 @@ func TestEndpointSlicesInitialSync(t *testing.T) {
 	}
 }
 
-func TestEndpointSlicesAggregation(t *testing.T) {
-	defer leaktest.CheckTimeout(t, endpointSliceTestTimeout)()
+// Sort functions should be the inverse of
+// endpointsubset.DefaultEndpointAddressOrderByFuncs()
+func testEndpointAddressOrderByFuncs() []endpointsubset.EndpointAddressLessFunc {
+	ip := func(x, y *kapi.EndpointAddress) bool {
+		return !endpointsubset.EndpointAddressIPLessFn(x, y)
+	}
+
+	hostname := func(x, y *kapi.EndpointAddress) bool {
+		return !endpointsubset.EndpointAddressHostnameLessFn(x, y)
+	}
+
+	return []endpointsubset.EndpointAddressLessFunc{
+		ip,
+		hostname,
+	}
+}
+
+// Sort functions should be the inverse of
+// endpointsubset.DefaultEndpointPortOrderByFuncs()
+func testEndpointPortOrderByFuncs() []endpointsubset.EndpointPortLessFunc {
+	port := func(x, y *kapi.EndpointPort) bool {
+		return !endpointsubset.EndpointPortPortNumberLessFn(x, y)
+	}
+
+	protocol := func(x, y *kapi.EndpointPort) bool {
+		return !endpointsubset.EndpointPortProtocolLessFn(x, y)
+	}
+
+	name := func(x, y *kapi.EndpointPort) bool {
+		return !endpointsubset.EndpointPortNameLessFn(x, y)
+	}
+
+	return []endpointsubset.EndpointPortLessFunc{
+		port,
+		protocol,
+		name,
+	}
+}
 
 	endpointSlices := []discoveryv1beta1.EndpointSlice{{
 		ObjectMeta: metav1.ObjectMeta{
@@ -278,7 +296,8 @@ func TestEndpointSlicesAggregation(t *testing.T) {
 		AddressType: discoveryv1beta1.AddressTypeIPv4,
 		Endpoints: []discoveryv1beta1.Endpoint{{
 			Addresses: []string{
-				"172.16.0.1",
+				"172.16.10.2",
+				"172.16.10.1",
 			},
 		}},
 		Ports: []discoveryv1beta1.EndpointPort{{
@@ -297,12 +316,14 @@ func TestEndpointSlicesAggregation(t *testing.T) {
 		AddressType: discoveryv1beta1.AddressTypeIPv4,
 		Endpoints: []discoveryv1beta1.Endpoint{{
 			Addresses: []string{
-				"172.16.0.2",
-				"172.16.0.1",
+				"172.17.0.2",
+				"172.17.0.1",
 			},
 		}},
 		Ports: []discoveryv1beta1.EndpointPort{{
-			Port: int32Ptr(32768),
+			Port: int32Ptr(65000),
+		}, {
+			Port: int32Ptr(32000),
 		}},
 	}, {
 		ObjectMeta: metav1.ObjectMeta{
@@ -312,8 +333,8 @@ func TestEndpointSlicesAggregation(t *testing.T) {
 		AddressType: discoveryv1beta1.AddressTypeIPv4,
 		Endpoints: []discoveryv1beta1.Endpoint{{
 			Addresses: []string{
-				"192.168.0.2",
-				"192.168.0.1",
+				"192.168.30.2",
+				"192.168.30.1",
 			},
 		}},
 		Ports: []discoveryv1beta1.EndpointPort{{
@@ -378,54 +399,39 @@ func TestEndpointSlicesAggregation(t *testing.T) {
 	}}
 
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.description, func(t *testing.T) {
+			t.Log(tc.description)
+
 			key := path.Join(tc.namespace, tc.serviceName)
 			pluginEndpoints, ok := plugin.endpoints[key]
 
 			if !tc.expectService {
 				if ok {
-					t.Fatalf("did not expect to find service %s/%s", tc.namespace, tc.serviceName)
+					t.Errorf("did not expect to find service %q", key)
 				}
 				return
 			}
 
 			if !ok {
-				t.Fatalf("expected plugin to have been notified for service %q", tc.serviceName)
+				t.Fatalf("expected plugin to have been notified for service %q", key)
 			}
 
 			sortedEndpointSubsets := convertEndpointSliceToEndpointSubset(tc.endpointSlices, endpointsubset.DefaultEndpointAddressOrderByFuncs(), endpointsubset.DefaultEndpointPortOrderByFuncs())
-			unsortedEndpointSubsets := convertEndpointSliceToEndpointSubset(tc.endpointSlices, nil, nil)
+			unsortedEndpointSubsets := convertEndpointSliceToEndpointSubset(tc.endpointSlices, testEndpointAddressOrderByFuncs(), testEndpointPortOrderByFuncs())
 
-			// This asserts that the declared addresses and ports in
-			// endpointSlices are unsorted compared to what will be
-			// received in plugin.HandleEndpoints().
-			if len(tc.endpointSlices) > 1 {
-				if diff := cmp.Diff(sortedEndpointSubsets, unsortedEndpointSubsets); diff == "" {
-					t.Errorf("sorting mismatch (-want +got):\n%s", diff)
-				}
+			if diff := cmp.Diff(sortedEndpointSubsets, unsortedEndpointSubsets); diff == "" {
+				t.Fatalf("sorting mismatch (-want +got):\n%s", diff)
 			}
 
 			if diff := cmp.Diff(sortedEndpointSubsets, pluginEndpoints.Subsets); diff != "" {
-				t.Errorf("sorting mismatch (-want +got):\n%s", diff)
+				t.Fatalf("sorting mismatch (-want +got):\n%s", diff)
 			}
 
 			if !reflect.DeepEqual(sortedEndpointSubsets, pluginEndpoints.Subsets) {
-				t.Errorf("expected subsets to be equal")
+				t.Fatalf("expected subsets to be equal")
 			}
 		})
 	}
-
-	//if expected, actual := 2, len(plugin.endpoints); actual != expected {
-	//	t.Fatalf("expected %v, got %v", expected, actual)
-	//}
-
 }
 
-// int32PtrDerefOr dereference the int32 ptr and returns it if not nil,
-// else returns def.
-func int32PtrDerefOr(ptr *int32, def int32) int32 {
-	if ptr != nil {
-		return *ptr
-	}
-	return def
 }
