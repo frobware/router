@@ -15,40 +15,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	fakekubeclient "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/openshift/router/pkg/router"
-	"github.com/openshift/router/pkg/router/controller/endpointsubset"
 )
 
 const endpointSliceTestTimeout = 1 * time.Minute
-
-type noopTestPlugin struct{}
-
-// Ensure noopTestPlugin is a router.Plugin.
-var _ router.Plugin = (*noopTestPlugin)(nil)
-
-func (p *noopTestPlugin) HandleRoute(watch.EventType, *routev1.Route) error {
-	return nil
-}
-
-func (p *noopTestPlugin) HandleNamespaces(sets.String) error {
-	return nil
-}
-
-func (p *noopTestPlugin) HandleNode(watch.EventType, *kapi.Node) error {
-	return nil
-}
-
-func (p *noopTestPlugin) HandleEndpoints(watch.EventType, *kapi.Endpoints) error {
-	return nil
-}
-
-func (p *noopTestPlugin) Commit() error {
-	return nil
-}
 
 type handleEndpointsEvent struct {
 	eventType watch.EventType
@@ -56,19 +29,33 @@ type handleEndpointsEvent struct {
 }
 
 type endpointSlicesTestPlugin struct {
-	noopTestPlugin
-
 	handleEndpointsCh chan handleEndpointsEvent
 }
 
 // Ensure endpointSlicesTestPlugin is a router.Plugin.
 var _ router.Plugin = (*endpointSlicesTestPlugin)(nil)
 
+func (p *endpointSlicesTestPlugin) HandleRoute(watch.EventType, *routev1.Route) error {
+	return nil
+}
+
+func (p *endpointSlicesTestPlugin) HandleNamespaces(sets.String) error {
+	return nil
+}
+
 func (p endpointSlicesTestPlugin) HandleEndpoints(eventType watch.EventType, endpoints *kapi.Endpoints) error {
 	p.handleEndpointsCh <- handleEndpointsEvent{
 		eventType: eventType,
 		endpoints: endpoints,
 	}
+	return nil
+}
+
+func (p *endpointSlicesTestPlugin) HandleNode(watch.EventType, *kapi.Node) error {
+	return nil
+}
+
+func (p *endpointSlicesTestPlugin) Commit() error {
 	return nil
 }
 
@@ -103,13 +90,16 @@ func newEndpointSliceTestController(plugin router.Plugin, initialObjects ...runt
 		NamespaceEndpoints: make(map[string]map[string]*kapi.Endpoints),
 	}
 
-	// The order here is signficant. In factory.Create() we
-	// register the event handlers after starting the informers
-	// but I find that to deliver (racy?) inconsistent callbacks
-	// on the plugin when the event handlers are subsequently
-	// added after both the informers are running and populating
-	// the initial store. Here we don't care about the initial
-	// sync, so skip that part.
+	// The order here is signficant. We're not interested:
+	//
+	//   factory.processExistingItems()
+	//
+	// as we want explicit control of when
+	// plugin.HandleEndpoints() gets called which we can achieve
+	// by first adding the event handlers, then starting the
+	// informers. Using processExistingItems() means we get called
+	// twice and that makes sync points in the add/delete test
+	// difficult (and racy).
 	factory.initInformers(controller)
 	factory.registerInformerEventHandlers(controller)
 	factory.startInformers(stopCh)
@@ -361,42 +351,25 @@ func TestEndpointSlicesDelete(t *testing.T) {
 		}},
 	}
 
-	initialObjs := []runtime.Object{&eps1, &eps2}
-	client, controller, stopCh := newEndpointSliceTestController(&noopTestPlugin{}, initialObjs...)
-	defer close(stopCh)
-	controller.Run()
-
-	if err := wait.PollImmediate(100*time.Millisecond, endpointSliceTestTimeout, func() (done bool, err error) {
-		objs, err := client.DiscoveryV1beta1().EndpointSlices(eps1.Namespace).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return false, err
-		}
-		if !controller.firstSyncDone {
-			return false, nil
-		}
-		s1 := convertEndpointSliceToEndpointSubset(objs.Items,
-			endpointsubset.DefaultEndpointAddressOrderByFuncs(),
-			endpointsubset.DefaultEndpointPortOrderByFuncs())
-
-		s2 := convertEndpointSliceToEndpointSubset([]discoveryv1beta1.EndpointSlice{eps1, eps2},
-			endpointsubset.DefaultEndpointAddressOrderByFuncs(),
-			endpointsubset.DefaultEndpointPortOrderByFuncs())
-
-		return len(cmp.Diff(s1, s2)) == 0, nil
-	}); err != nil {
-		t.Fatalf("initial setup failed: %v", err)
-	}
-
-	// Now that we've reached our initial state we want to receive
-	// events when HandleEndpoints().
 	plugin := &endpointSlicesTestPlugin{
 		handleEndpointsCh: make(chan handleEndpointsEvent),
 	}
 
-	// Prevent data race when replacing plugin.
-	controller.lock.Lock()
-	controller.Plugin = plugin
-	controller.lock.Unlock()
+	client, controller, stopCh := newEndpointSliceTestController(plugin)
+	defer close(stopCh)
+	controller.Run()
+
+	for _, eps := range []discoveryv1beta1.EndpointSlice{eps1, eps2} {
+		if _, err := client.DiscoveryV1beta1().EndpointSlices(eps.Namespace).Create(context.TODO(), &eps, metav1.CreateOptions{}); err != nil {
+			t.Fatalf("failed to create endpointslice %s: %v", eps.Name, err)
+		}
+
+		select {
+		case <-plugin.handleEndpointsCh:
+		case <-time.After(endpointSliceTestTimeout):
+			t.Fatal("timeout")
+		}
+	}
 
 	type testCase struct {
 		description             string
