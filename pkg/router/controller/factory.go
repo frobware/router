@@ -95,13 +95,14 @@ func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool, 
 		rc.ProjectSyncInterval = f.ResyncInterval
 	}
 
-	f.initInformers(rc, stopCh)
+	f.initInformers(rc)
+	f.startInformers(stopCh)
 	f.processExistingItems(rc)
 	f.registerInformerEventHandlers(rc)
 	return rc
 }
 
-func (f *RouterControllerFactory) initInformers(rc *RouterController, stopCh <-chan struct{}) {
+func (f *RouterControllerFactory) initInformers(rc *RouterController) {
 	if f.NamespaceLabels != nil {
 		f.createNamespacesSharedInformer()
 	}
@@ -115,7 +116,9 @@ func (f *RouterControllerFactory) initInformers(rc *RouterController, stopCh <-c
 	if rc.WatchNodes {
 		f.createNodesSharedInformer()
 	}
+}
 
+func (f *RouterControllerFactory) startInformers(stopCh <-chan struct{}) {
 	// Start informers
 	for _, informer := range f.informers {
 		go informer.Run(stopCh)
@@ -143,7 +146,8 @@ func (f *RouterControllerFactory) registerInformerEventHandlers(rc *RouterContro
 			} else {
 				objMeta := eps.ObjectMeta.DeepCopy()
 				objMeta.Name = serviceName
-				rc.HandleEndpointSlice(eventType, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
+				objType := reflect.TypeOf(&discoveryv1beta1.EndpointSlice{})
+				rc.HandleEndpointSlice(eventType, *objMeta, aggregateEndpointSlice(f.informers[objType], eps.Namespace, serviceName))
 			}
 		})
 	}
@@ -156,9 +160,8 @@ func (f *RouterControllerFactory) registerInformerEventHandlers(rc *RouterContro
 
 }
 
-func (f *RouterControllerFactory) aggregateEndpointSlice(namespace, name string) []discoveryv1beta1.EndpointSlice {
-	objType := reflect.TypeOf(&discoveryv1beta1.EndpointSlice{})
-	objs, _ := f.informers[objType].GetIndexer().ByIndex(ServiceNameIndex, path.Join(namespace, name))
+func aggregateEndpointSlice(informer kcache.SharedIndexInformer, namespace, serviceName string) []discoveryv1beta1.EndpointSlice {
+	objs, _ := informer.GetIndexer().ByIndex(ServiceNameIndex, path.Join(namespace, serviceName))
 	fullSet := make([]discoveryv1beta1.EndpointSlice, len(objs), len(objs))
 
 	for i := range objs {
@@ -221,7 +224,8 @@ func (f *RouterControllerFactory) processExistingItems(rc *RouterController) {
 				log.V(4).Info("processing existing items", "namespace", eps.Namespace, "serviceName", serviceName)
 				objMeta := eps.ObjectMeta.DeepCopy()
 				objMeta.Name = serviceName
-				rc.HandleEndpointSlice(watch.Added, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
+				objType := reflect.TypeOf(eps)
+				rc.HandleEndpointSlice(watch.Added, *objMeta, aggregateEndpointSlice(f.informers[objType], eps.Namespace, serviceName))
 				processedServices[serviceKey] = true
 			}
 		}
