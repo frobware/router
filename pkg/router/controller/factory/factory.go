@@ -28,6 +28,7 @@ import (
 	"github.com/openshift/router/pkg/router"
 	routercontroller "github.com/openshift/router/pkg/router/controller"
 	"github.com/openshift/router/pkg/router/routeapihelpers"
+	"github.com/openshift/router/pkg/router/unidling"
 
 	logf "github.com/openshift/router/log"
 )
@@ -147,6 +148,14 @@ func (f *RouterControllerFactory) registerInformerEventHandlers(rc *routercontro
 			} else {
 				objMeta := eps.ObjectMeta.DeepCopy()
 				objMeta.Name = serviceName
+				if ep, err := f.KClient.CoreV1().Endpoints(eps.Namespace).Get(context.TODO(), serviceName, metav1.GetOptions{}); err == nil {
+					if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok && len(val) != 0 {
+						if objMeta.Annotations == nil {
+							objMeta.Annotations = map[string]string{}
+						}
+						objMeta.Annotations[unidling.IdledAtAnnotation] = val
+					}
+				}
 				rc.HandleEndpointSlice(eventType, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
 			}
 		})

@@ -304,6 +304,10 @@ func convertEndpointSliceToEndpointSubset(items []discoveryv1beta1.EndpointSlice
 			}
 		}
 
+		if len(addresses) == 0 {
+			continue
+		}
+
 		for j := range items[i].Ports {
 			endpointPort := kapi.EndpointPort{
 				AppProtocol: items[i].Ports[j].AppProtocol,
