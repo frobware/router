@@ -231,7 +231,7 @@ func TestEndpointSlicesAdd(t *testing.T) {
 		},
 		expectedServiceName:     "service-b",
 		expectedEventType:       watch.Modified,
-		expectedEndpointSubsets: []kapi.EndpointSubset{{}},
+		expectedEndpointSubsets: nil,
 	}}
 
 	for _, tc := range testCases {
