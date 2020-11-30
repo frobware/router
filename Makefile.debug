@@ -1,0 +1,25 @@
+# -*- mode: makefile -*-
+new-openshift-router-image:
+	GO111MODULE=on GOFLAGS=-mod=vendor go build -o openshift-router -gcflags=all="-N -l" ./cmd/openshift-router
+	imagebuilder -t frobware/openshift-router:remote-debug -f Dockerfile.debug .
+
+push:
+	docker push frobware/openshift-router:remote-debug
+
+set-image:
+	oc scale --replicas 0 -n openshift-cluster-version deployments/cluster-version-operator
+	oc scale --replicas 0 -n openshift-ingress-operator deployments ingress-operator
+	oc -n openshift-ingress scale deployment --replicas=0 router-default
+	oc -n openshift-ingress set image deployment/router-default router=frobware/openshift-router:remote-debug
+	oc -n openshift-ingress scale deployment --replicas=1 router-default
+
+dwim:  new-openshift-router-image push set-image
+
+reset:
+	oc scale --replicas 1 -n openshift-cluster-version deployments/cluster-version-operator
+	oc scale --replicas 1 -n openshift-ingress-operator deployments ingress-operator
+
+# Don't forget to change the router deployment to:
+## Remove liveness probe
+## Remove readiness probe
+## Set ImagePullPolicy: Always
