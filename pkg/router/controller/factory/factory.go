@@ -110,11 +110,9 @@ func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterContr
 	if f.NamespaceLabels != nil {
 		f.createNamespacesSharedInformer()
 	}
-	if f.watchEndpoints {
-		f.createEndpointsSharedInformer()
-	} else {
-		f.createEndpointSliceSharedInformer()
-	}
+
+	f.createEndpointsSharedInformer()
+	f.createEndpointSliceSharedInformer()
 	f.CreateRoutesSharedInformer()
 
 	if rc.WatchNodes {
@@ -141,22 +139,22 @@ func (f *RouterControllerFactory) registerInformerEventHandlers(rc *routercontro
 	if f.watchEndpoints {
 		f.registerSharedInformerEventHandlers(&kapi.Endpoints{}, rc.HandleEndpoints)
 	} else {
+		// We register event handlers for Endpoints so that we
+		// can query the endpoint cache to find out if a
+		// service has been idled; an idled service will have
+		// an annotation on the endpoint resource.
+		f.registerSharedInformerEventHandlers(&kapi.Endpoints{}, rc.HandleEndpointsNamespace)
+
 		f.registerSharedInformerEventHandlers(&discoveryv1beta1.EndpointSlice{}, func(eventType watch.EventType, obj interface{}) {
 			eps := obj.(*discoveryv1beta1.EndpointSlice)
 			if serviceName := endpointSliceServiceName(eps); len(serviceName) == 0 {
 				log.V(4).Info("EndpointSlice has no service name", "namespace", eps.Namespace, "name", eps.Name, "label", discoveryv1beta1.LabelServiceName)
 			} else {
-				objMeta := eps.ObjectMeta.DeepCopy()
-				objMeta.Name = serviceName
-				if ep, err := f.KClient.CoreV1().Endpoints(eps.Namespace).Get(context.TODO(), serviceName, metav1.GetOptions{}); err == nil {
-					if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok && len(val) != 0 {
-						if objMeta.Annotations == nil {
-							objMeta.Annotations = map[string]string{}
-						}
-						objMeta.Annotations[unidling.IdledAtAnnotation] = val
-					}
+				if objMeta, err := f.endpointSliceObjMeta(serviceName, eps); err != nil {
+					utilruntime.HandleError(err)
+				} else {
+					rc.HandleEndpointSlice(eventType, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
 				}
-				rc.HandleEndpointSlice(eventType, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
 			}
 		})
 	}
@@ -237,10 +235,12 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 			serviceKey := path.Join(eps.Namespace, serviceName)
 			if !processedServices[serviceKey] {
 				log.V(4).Info("processing existing items", "namespace", eps.Namespace, "serviceName", serviceName)
-				objMeta := eps.ObjectMeta.DeepCopy()
-				objMeta.Name = serviceName
-				rc.HandleEndpointSlice(watch.Added, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
-				processedServices[serviceKey] = true
+				if objMeta, err := f.endpointSliceObjMeta(serviceName, eps); err != nil {
+					utilruntime.HandleError(err)
+				} else {
+					rc.HandleEndpointSlice(watch.Added, *objMeta, f.aggregateEndpointSlice(eps.Namespace, serviceName))
+					processedServices[serviceKey] = true
+				}
 			}
 		}
 	}
@@ -433,4 +433,30 @@ func (f *RouterControllerFactory) createEndpointSliceSharedInformer() {
 		ServiceNameIndex:      endpointSliceByServiceLabelIndexFunc,
 	})
 	f.informers[objType] = informer
+}
+
+func (f *RouterControllerFactory) endpointSliceObjMeta(serviceName string, eps *discoveryv1beta1.EndpointSlice) (*metav1.ObjectMeta, error) {
+	objMeta := eps.ObjectMeta.DeepCopy()
+	objMeta.Name = serviceName
+
+	epType := reflect.TypeOf(&kapi.Endpoints{})
+	item, endpointExists, err := f.informers[epType].GetStore().GetByKey(path.Join(eps.Namespace, serviceName))
+	if err != nil {
+		return nil, err
+	}
+
+	if endpointExists {
+		ep, ok := item.(*kapi.Endpoints)
+		if !ok {
+			return nil, fmt.Errorf("expecting type %q, got %T", epType, ep)
+		}
+		if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok && len(val) != 0 {
+			if objMeta.Annotations == nil {
+				objMeta.Annotations = map[string]string{}
+			}
+			objMeta.Annotations[unidling.IdledAtAnnotation] = val
+		}
+	}
+
+	return objMeta, nil
 }

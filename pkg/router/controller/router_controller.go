@@ -229,6 +229,15 @@ func (c *RouterController) HandleEndpoints(eventType watch.EventType, obj interf
 	c.Commit()
 }
 
+// TODO(frobware) - it this necessary TBD
+func (c *RouterController) HandleEndpointsNamespace(eventType watch.EventType, obj interface{}) {
+	endpoints := obj.(*kapi.Endpoints)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.RecordNamespaceEndpoints(eventType, endpoints)
+	c.Commit()
+}
+
 // HandleEndpointSlice handles a single EndpointSlice event and refreshes the router backend.
 func (c *RouterController) HandleEndpointSlice(eventType watch.EventType, objMeta metav1.ObjectMeta, items []discoveryv1beta1.EndpointSlice) {
 	endpoints := &kapi.Endpoints{
