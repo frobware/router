@@ -112,7 +112,9 @@ func (f *RouterControllerFactory) initInformers(rc *routercontroller.RouterContr
 	}
 
 	f.createEndpointsSharedInformer()
-	f.createEndpointSliceSharedInformer()
+	if !f.watchEndpoints {
+		f.createEndpointSliceSharedInformer()
+	}
 	f.CreateRoutesSharedInformer()
 
 	if rc.WatchNodes {
@@ -450,7 +452,7 @@ func (f *RouterControllerFactory) endpointSliceObjMeta(serviceName string, eps *
 		if !ok {
 			return nil, fmt.Errorf("expecting type %q, got %T", epType, ep)
 		}
-		if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok && len(val) != 0 {
+		if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok {
 			if objMeta.Annotations == nil {
 				objMeta.Annotations = map[string]string{}
 			}
