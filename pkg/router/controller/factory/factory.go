@@ -452,11 +452,14 @@ func (f *RouterControllerFactory) endpointSliceObjMeta(serviceName string, eps *
 		if !ok {
 			return nil, fmt.Errorf("expecting type %q, got %T", epType, ep)
 		}
+		if objMeta.Annotations == nil {
+			objMeta.Annotations = map[string]string{}
+		}
 		if val, ok := ep.Annotations[unidling.IdledAtAnnotation]; ok {
-			if objMeta.Annotations == nil {
-				objMeta.Annotations = map[string]string{}
-			}
 			objMeta.Annotations[unidling.IdledAtAnnotation] = val
+		}
+		if val, ok := ep.Annotations[unidling.UnidleTargetAnnotation]; ok {
+			objMeta.Annotations[unidling.UnidleTargetAnnotation] = val
 		}
 	}
 
