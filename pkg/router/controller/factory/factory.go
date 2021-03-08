@@ -8,6 +8,8 @@ import (
 	"sort"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	kapi "k8s.io/api/core/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -236,12 +238,62 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 		}
 	}
 
+	// Inject
+	objType := reflect.TypeOf(&routev1.Route{})
+	informer, ok := f.informers[objType]
+	if ok {
+		store := informer.GetStore()
+
+		for n := 1; n < 13500; n++ {
+			err := store.Add(&routev1.Route{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Route",
+					APIVersion: "route.openshift.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("injected-%d", n),
+					Namespace: "test",
+					Labels: map[string]string{
+						"app": "helloworld-1",
+					},
+				},
+				Spec: routev1.RouteSpec{
+					Host: fmt.Sprintf("injected-%d.%s", n, "apps.ci-ln-p1nf282-f76d1.origin-ci-int-gce.dev.openshift.com"),
+					To: routev1.RouteTargetReference{
+						Kind: "Service",
+						Name: "helloworld-1",
+					},
+					Port: &routev1.RoutePort{
+						TargetPort: intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: 8080,
+						},
+					},
+					TLS: &routev1.TLSConfig{
+						Termination:                   routev1.TLSTerminationEdge,
+						InsecureEdgeTerminationPolicy: routev1.InsecureEdgeTerminationPolicyRedirect,
+						Certificate:                   "-----BEGIN CERTIFICATE-----\nMIIBwjCCAWigAwIBAgIQBOnV7ZNjo8eytu+7XPUWWzAKBggqhkjOPQQDAjAoMRQw\nEgYDVQQKEwtDZXJ0IEdlbiBDbzEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yMTAzMDMx\nNzQ0MzlaGA8yMTIxMDIwNzE3NDQzOVowQjEZMBcGA1UEChMQQ2VydCBHZW4gQ29t\ncGFueTElMCMGA1UEAxMcQ2VydCBHZW4gQ29tcGFueSBDb21tb24gTmFtZTBZMBMG\nByqGSM49AgEGCCqGSM49AwEHA0IABOyvzVvg31S9PTximtluNkQrL9OIV37fjG39\nVROnMZAR7qjHVSBWOdlLdaMoId7BUH7lymYkzyAVB4XMKcNCnh6jWDBWMA4GA1Ud\nDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAMBgNVHRMBAf8EAjAAMCEG\nA1UdEQQaMBiHBH8AAAGHEAAAAAAAAAAAAAAAAAAAAAEwCgYIKoZIzj0EAwIDSAAw\nRQIhALJq1tspJAWDS0EoHiSnfuentvY7i/Ynr2rJouiCYb7xAiBDjA9CgZVX984x\nLX/NJiPiIrRDcqaMEDIcHrCkQdzD1g==\n-----END CERTIFICATE-----\n",
+						Key:                           "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEINWem3YvZnUpdiGCvtwZ68obwYiQclYQ6M/nifmeXHwioAoGCCqGSM49\nAwEHoUQDQgAE7K/NW+DfVL09PGKa2W42RCsv04hXft+Mbf1VE6cxkBHuqMdVIFY5\n2Ut1oygh3sFQfuXKZiTPIBUHhcwpw0KeHg==\n-----END EC PRIVATE KEY-----\n\n",
+					},
+					WildcardPolicy: routev1.WildcardPolicyNone,
+				},
+			})
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
+	}
+
 	items := []routev1.Route{}
 	for _, item := range f.informerStoreList(&routev1.Route{}) {
+		// if strings.Contains(item.(*routev1.Route).Name, "injected") {
 		items = append(items, *(item.(*routev1.Route)))
+		// }
 	}
 	// Return routes in order of age to avoid rejections during resync
 	sort.Sort(routeAge(items))
+	fmt.Printf("FROBWARE Sorting %v INJECTED items\n", len(items))
+
 	for i := range items {
 		rc.HandleRoute(watch.Added, &items[i])
 	}
@@ -294,6 +346,7 @@ func (f *RouterControllerFactory) CreateRoutesSharedInformer() kcache.SharedInde
 					f.RouteModifierFn(&routeList.Items[i])
 				}
 			}
+			fmt.Printf("FROBWARE Sorting %v items\n", len(routeList.Items))
 			// Return routes in order of age to avoid rejections during resync
 			sort.Sort(routeAge(routeList.Items))
 			return routeList, nil
