@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -31,9 +32,33 @@ func isTrue(s string) bool {
 	return v
 }
 
+var compiledRegexp sync.Map
+
+func cachedRegexpCompile(pattern string) (*regexp.Regexp, error) {
+	v, ok := compiledRegexp.Load(pattern)
+	if !ok {
+		log.V(7).Info("compiling regexp", "pattern", pattern)
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		compiledRegexp.Store(pattern, re)
+		return re, nil
+	}
+	return v.(*regexp.Regexp), nil
+}
+
+func matchString(pattern string, s string) (matched bool, err error) {
+	re, err := cachedRegexpCompile(pattern)
+	if err != nil {
+		return false, err
+	}
+	return re.MatchString(s), nil
+}
+
 func firstMatch(pattern string, values ...string) string {
 	log.V(7).Info("firstMatch called", "pattern", pattern, "values", values)
-	if re, err := regexp.Compile(`\A(?:` + pattern + `)\z`); err == nil {
+	if re, err := cachedRegexpCompile(`\A(?:` + pattern + `)\z`); err == nil {
 		for _, value := range values {
 			if re.MatchString(value) {
 				log.V(7).Info("firstMatch returning", "value", value)
@@ -80,7 +105,7 @@ func matchValues(s string, allowedValues ...string) bool {
 
 func matchPattern(pattern, s string) bool {
 	log.V(7).Info("matchPattern called", "pattern", pattern, "s", s)
-	status, err := regexp.MatchString(`\A(?:`+pattern+`)\z`, s)
+	status, err := matchString(`\A(?:`+pattern+`)\z`, s)
 	if err == nil {
 		log.V(7).Info("matchPattern returning", "foundMatch", status)
 		return status
