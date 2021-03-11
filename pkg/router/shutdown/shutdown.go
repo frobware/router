@@ -21,8 +21,8 @@ func SetupSignalHandler() <-chan struct{} {
 	go func() {
 		<-shutdownHandler
 		close(stop)
-		<-shutdownHandler
-		os.Exit(1) // second signal. Exit directly.
+		// <-shutdownHandler
+		// os.Exit(1) // second signal. Exit directly.
 	}()
 
 	return stop

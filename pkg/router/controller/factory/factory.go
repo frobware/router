@@ -105,20 +105,20 @@ func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool, 
 		rc.ProjectSyncInterval = f.ResyncInterval
 	}
 
-	tnow := time.Now()
+	startTime := time.Now()
 	fmt.Println("f.initInformers")
 	f.initInformers(rc, stopCh)
-	fmt.Println("f.initInformers DONE IN", time.Now().Sub(tnow).String())
+	fmt.Println("f.initInformers DONE IN", time.Now().Sub(startTime).String())
 
-	tnow = time.Now()
+	startTime = time.Now()
 	fmt.Println("f.processExistingItems")
 	f.processExistingItems(rc)
-	fmt.Println("f.processExistingItems DONE IN ", time.Now().Sub(tnow).String())
+	fmt.Println("f.processExistingItems DONE IN ", time.Now().Sub(startTime).String())
 
-	tnow = time.Now()
+	startTime = time.Now()
 	fmt.Println("f.registerInformerEventHandlers")
 	f.registerInformerEventHandlers(rc)
-	fmt.Println("f.registerInformerEventHandlers DONE IN", time.Now().Sub(tnow).String())
+	fmt.Println("f.registerInformerEventHandlers DONE IN", time.Now().Sub(startTime).String())
 
 	return rc
 }
@@ -262,24 +262,27 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 	// Inject
 	objType := reflect.TypeOf(&routev1.Route{})
 	informer, ok := f.informers[objType]
+	if !ok {
+		panic("interesting")
+	}
 	if ok {
 		store := informer.GetStore()
 
-		for n := 1; n < 100000; n++ {
+		for n := 1; n < 100001; n++ {
 			err := store.Add(&routev1.Route{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Route",
 					APIVersion: "route.openshift.io/v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("injected-%d", n),
+					Name:      fmt.Sprintf("injected%d", n),
 					Namespace: "test",
 					Labels: map[string]string{
 						"app": "helloworld-1",
 					},
 				},
 				Spec: routev1.RouteSpec{
-					Host: fmt.Sprintf("injected-%d.%s", n, domain),
+					Host: fmt.Sprintf("injected%d.%s", n, domain),
 					To: routev1.RouteTargetReference{
 						Kind: "Service",
 						Name: "helloworld-1",

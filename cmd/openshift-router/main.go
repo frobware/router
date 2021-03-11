@@ -12,16 +12,15 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/klog"
 
-	"k8s.io/client-go/pkg/version"
-
-	"github.com/openshift/library-go/pkg/serviceability"
-
 	"github.com/openshift/router/pkg/cmd/infra/router"
+
+	"github.com/pkg/profile"
 )
 
 func main() {
-	defer serviceability.BehaviorOnPanic(os.Getenv("OPENSHIFT_ON_PANIC"), version.Get())()
-	defer serviceability.Profile(os.Getenv("OPENSHIFT_PROFILE")).Stop()
+	// defer serviceability.BehaviorOnPanic(os.Getenv("OPENSHIFT_ON_PANIC"), version.Get())()
+	// defer serviceability.Profile(os.Getenv("OPENSHIFT_PROFILE")).Stop()
+	defer profile.Start(profile.CPUProfile).Stop()
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	cmd := CommandFor(filepath.Base(os.Args[0]))
