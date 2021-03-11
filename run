@@ -9,9 +9,7 @@ cp $t /tmp/lib/haproxy/conf/haproxy-config.template
 
 srcdir="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd -P)"
 
-pushd /tmp/lib/haproxy/conf
-
-perf record ${srcdir}/openshift-router \
+perf record -g -a ${srcdir}/openshift-router \
  --config ${KUBECONFIG:-$HOME/.kube/config} \
  --template /tmp/lib/haproxy/conf/haproxy-config.template \
  --reload /usr/bin/true \
