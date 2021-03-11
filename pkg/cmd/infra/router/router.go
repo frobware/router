@@ -18,6 +18,7 @@ import (
 	kclientset "k8s.io/client-go/kubernetes"
 
 	routev1 "github.com/openshift/api/route/v1"
+	configclientset "github.com/openshift/client-go/config/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 
@@ -243,8 +244,8 @@ func (o *RouterSelection) Complete() error {
 }
 
 // NewFactory initializes a factory that will watch the requested routes
-func (o *RouterSelection) NewFactory(routeclient routeclientset.Interface, projectclient projectclient.ProjectInterface, kc kclientset.Interface) *controllerfactory.RouterControllerFactory {
-	factory := controllerfactory.NewDefaultRouterControllerFactory(routeclient, projectclient, kc, o.WatchEndpoints)
+func (o *RouterSelection) NewFactory(configclient configclientset.Interface, routeclient routeclientset.Interface, projectclient projectclient.ProjectInterface, kc kclientset.Interface) *controllerfactory.RouterControllerFactory {
+	factory := controllerfactory.NewDefaultRouterControllerFactory(configclient, routeclient, projectclient, kc, o.WatchEndpoints)
 	factory.LabelSelector = o.LabelSelector
 	factory.FieldSelector = o.FieldSelector
 	factory.Namespace = o.Namespace

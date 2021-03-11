@@ -31,6 +31,7 @@ import (
 	authorizationclient "k8s.io/client-go/kubernetes/typed/authorization/v1"
 
 	routev1 "github.com/openshift/api/route/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	routelisters "github.com/openshift/client-go/route/listers/route/v1"
@@ -587,6 +588,10 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 	if err != nil {
 		return err
 	}
+	configclient, err := configclient.NewForConfig(config)
+	if err != nil {
+		return err
+	}
 
 	var cfgManager templateplugin.ConfigManager
 	var blueprintPlugin router.Plugin
@@ -643,7 +648,7 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 	}
 	ptrTemplatePlugin = templatePlugin
 
-	factory := o.RouterSelection.NewFactory(routeclient, projectclient.ProjectV1().Projects(), kc)
+	factory := o.RouterSelection.NewFactory(configclient, routeclient, projectclient.ProjectV1().Projects(), kc)
 	factory.RouteModifierFn = o.RouteUpdate
 
 	var plugin router.Plugin = templatePlugin
@@ -672,7 +677,7 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 	if blueprintPlugin != nil {
 		// f is like factory but filters the routes based on the
 		// blueprint route namespace and label selector (if any).
-		f := o.RouterSelection.NewFactory(routeclient, projectclient.ProjectV1().Projects(), kc)
+		f := o.RouterSelection.NewFactory(configclient, routeclient, projectclient.ProjectV1().Projects(), kc)
 		f.LabelSelector = o.BlueprintRouteLabelSelector
 		f.Namespace = o.BlueprintRouteNamespace
 		f.ResyncInterval = o.ResyncInterval

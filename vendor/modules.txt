@@ -115,11 +115,15 @@ github.com/modern-go/reflect2
 github.com/munnerz/goautoneg
 # github.com/openshift/api v0.0.0-20210115203145-3b72f192aace
 ## explicit
+github.com/openshift/api/config/v1
 github.com/openshift/api/project/v1
 github.com/openshift/api/route
 github.com/openshift/api/route/v1
 # github.com/openshift/client-go v0.0.0-20201214125552-e615e336eb49
 ## explicit
+github.com/openshift/client-go/config/clientset/versioned
+github.com/openshift/client-go/config/clientset/versioned/scheme
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/project/clientset/versioned
 github.com/openshift/client-go/project/clientset/versioned/fake
 github.com/openshift/client-go/project/clientset/versioned/scheme

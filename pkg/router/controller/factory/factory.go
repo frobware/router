@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	kapi "k8s.io/api/core/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
@@ -23,6 +24,7 @@ import (
 	kcache "k8s.io/client-go/tools/cache"
 
 	routev1 "github.com/openshift/api/route/v1"
+	configclientset "github.com/openshift/client-go/config/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	routeclientset "github.com/openshift/client-go/route/clientset/versioned"
 	informerfactory "k8s.io/client-go/informers"
@@ -45,6 +47,7 @@ var log = logf.Logger.WithName("controller_factory")
 // controller. It supports optional scoping on Namespace, Labels, and Fields of routes.
 // If Namespace is empty, it means "all namespaces".
 type RouterControllerFactory struct {
+	ConfigClient  configclientset.Interface
 	KClient       kclientset.Interface
 	RClient       routeclientset.Interface
 	ProjectClient projectclient.ProjectInterface
@@ -62,8 +65,9 @@ type RouterControllerFactory struct {
 }
 
 // NewDefaultRouterControllerFactory initializes a default router controller factory.
-func NewDefaultRouterControllerFactory(rc routeclientset.Interface, pc projectclient.ProjectInterface, kc kclientset.Interface, watchEndpoints bool) *RouterControllerFactory {
+func NewDefaultRouterControllerFactory(cc configclientset.Interface, rc routeclientset.Interface, pc projectclient.ProjectInterface, kc kclientset.Interface, watchEndpoints bool) *RouterControllerFactory {
 	return &RouterControllerFactory{
+		ConfigClient:   cc,
 		KClient:        kc,
 		RClient:        rc,
 		ProjectClient:  pc,
@@ -238,6 +242,11 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 		}
 	}
 
+	domain, err := getDefaultIngressClusterDomainName(f.ConfigClient, time.Minute)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	// Inject
 	objType := reflect.TypeOf(&routev1.Route{})
 	informer, ok := f.informers[objType]
@@ -258,7 +267,7 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 					},
 				},
 				Spec: routev1.RouteSpec{
-					Host: fmt.Sprintf("injected-%d.%s", n, "apps.ci-ln-p1nf282-f76d1.origin-ci-int-gce.dev.openshift.com"),
+					Host: fmt.Sprintf("injected-%d.%s", n, domain),
 					To: routev1.RouteTargetReference{
 						Kind: "Service",
 						Name: "helloworld-1",
@@ -293,6 +302,7 @@ func (f *RouterControllerFactory) processExistingItems(rc *routercontroller.Rout
 	// Return routes in order of age to avoid rejections during resync
 	sort.Sort(routeAge(items))
 	fmt.Printf("FROBWARE Sorting %v INJECTED items\n", len(items))
+	fmt.Printf("FROBWARE Sorting DONE\n")
 
 	for i := range items {
 		rc.HandleRoute(watch.Added, &items[i])
@@ -477,4 +487,23 @@ func (f *RouterControllerFactory) createEndpointSliceSharedInformer() {
 		ServiceNameIndex:      endpointSliceByServiceLabelIndexFunc,
 	})
 	f.informers[objType] = informer
+}
+
+func getDefaultIngressClusterDomainName(c configclientset.Interface, timeout time.Duration) (string, error) {
+	var domain string
+
+	if err := wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+		ingress, err := c.ConfigV1().Ingresses().Get(context.TODO(), "cluster", metav1.GetOptions{})
+		if err != nil {
+			fmt.Printf("Get ingresses.config/cluster failed: %v\n, retrying...", err)
+			return false, nil
+		}
+		domain = ingress.Spec.Domain
+		return true, nil
+	}); err != nil {
+		return "", err
+	}
+
+	fmt.Println(domain)
+	return domain, nil
 }
