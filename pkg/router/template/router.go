@@ -149,7 +149,7 @@ type templateRouterCfg struct {
 // templateConfig is a subset of the templateRouter information that should be passed to the template for generating
 // the correct configuration.
 type templateData struct {
-	// the directory that files will be written to, defaults to /var/lib/containers/router
+	// the directory that files will be written to, defaults to /tmp/lib/containers/router
 	WorkingDir string
 	// the routes
 	State map[ServiceAliasConfigKey](ServiceAliasConfig)

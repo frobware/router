@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 
-./openshift-router \
+set -eu
+
+t="$PWD/haproxy-config.template"
+t="$PWD/images/router/haproxy/conf/haproxy-config.template"
+
+cp $t /tmp/lib/haproxy/conf/haproxy-config.template
+
+srcdir="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd -P)"
+
+pushd /tmp/lib/haproxy/conf
+
+perf record ${srcdir}/openshift-router \
  --config ${KUBECONFIG:-$HOME/.kube/config} \
- --template $PWD/images/router/haproxy/conf/haproxy-config.template \
- --reload /usr/bin/true --working-dir /tmp/var/lib/haproxy \
+ --template /tmp/lib/haproxy/conf/haproxy-config.template \
+ --reload /usr/bin/true \
  --v=2

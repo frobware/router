@@ -112,13 +112,13 @@ func TestHAProxyMapRefresh(t *testing.T) {
 		{
 			name:            "empty socket and valid map",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			failureExpected: true,
 		},
 		{
 			name:            "valid socket and map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			failureExpected: false,
 		},
 		{
@@ -130,7 +130,7 @@ func TestHAProxyMapRefresh(t *testing.T) {
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			failureExpected: true,
 		},
 		{
@@ -142,7 +142,7 @@ func TestHAProxyMapRefresh(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			failureExpected: true,
 		},
 	}
@@ -186,12 +186,12 @@ func TestHAProxyMapCommit(t *testing.T) {
 		{
 			name:     "empty socket valid map",
 			sockFile: "",
-			mapName:  "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:  "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 		},
 		{
 			name:     "valid socket",
 			sockFile: server.SocketFile(),
-			mapName:  "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:  "/tmp/lib/haproxy/conf/os_http_be.map",
 		},
 		{
 			name:     "valid socket but invalid map",
@@ -201,7 +201,7 @@ func TestHAProxyMapCommit(t *testing.T) {
 		{
 			name:     "valid socket but typo map",
 			sockFile: server.SocketFile(),
-			mapName:  "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:  "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 		},
 		{
 			name:     "non-existent socket",
@@ -211,7 +211,7 @@ func TestHAProxyMapCommit(t *testing.T) {
 		{
 			name:     "non-existent socket valid map",
 			sockFile: "/non-existent/fake-haproxy.sock",
-			mapName:  "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:  "/tmp/lib/haproxy/conf/os_tcp_be.map",
 		},
 	}
 
@@ -248,13 +248,13 @@ func TestHAProxyMapName(t *testing.T) {
 		{
 			name:            "empty socket valid map",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			failureExpected: true,
 		},
 		{
 			name:            "valid socket",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			failureExpected: false,
 		},
 		{
@@ -266,7 +266,7 @@ func TestHAProxyMapName(t *testing.T) {
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			failureExpected: true,
 		},
 		{
@@ -278,7 +278,7 @@ func TestHAProxyMapName(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			failureExpected: true,
 		},
 	}
@@ -328,7 +328,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "empty socket valid map and key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         `^route\.passthrough\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 			entriesExpected: false,
@@ -336,7 +336,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "empty socket valid map and invalid key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         "non-existent-key",
 			failureExpected: true,
 			entriesExpected: false,
@@ -344,7 +344,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "valid socket, map and key",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: false,
 			entriesExpected: true,
@@ -368,7 +368,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "valid socket but invalid key",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         "invalid-key",
 			failureExpected: false,
 			entriesExpected: false,
@@ -376,7 +376,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 			entriesExpected: false,
@@ -392,7 +392,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         "invalid-key",
 			failureExpected: true,
 			entriesExpected: false,
@@ -408,7 +408,7 @@ func TestHAProxyMapFind(t *testing.T) {
 		{
 			name:            "non-existent socket valid map and key",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         `^reencrypt\.blueprints\.org(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 			entriesExpected: false,
@@ -468,7 +468,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "empty socket valid map and key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         `^route\.passthrough\.test(:[0-9]+)?(/.*)?$`,
 			value:           "1",
 			replace:         true,
@@ -477,7 +477,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "empty socket valid map and invalid key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         "non-existent-key",
 			value:           "something",
 			replace:         false,
@@ -486,7 +486,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "valid socket",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			value:           "be_edge_http:default:test-http-allow",
 			replace:         true,
@@ -495,7 +495,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "valid socket no replace",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			value:           "be_edge_http:default:test-http-allow",
 			replace:         false,
@@ -522,7 +522,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "valid socket but invalid key",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         "invalid-key2",
 			value:           "something",
 			replace:         true,
@@ -531,7 +531,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			value:           "be_edge_http:default:test-http-allow",
 			replace:         true,
@@ -549,7 +549,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         "invalid-key4",
 			value:           "some-value",
 			replace:         true,
@@ -567,7 +567,7 @@ func TestHAProxyMapAdd(t *testing.T) {
 		{
 			name:            "non-existent socket valid map and key",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         `^reencrypt\.blueprints\.org(:[0-9]+)?(/.*)?$`,
 			value:           "1234",
 			replace:         false,
@@ -621,21 +621,21 @@ func TestHAProxyMapDelete(t *testing.T) {
 		{
 			name:            "empty socket valid map and key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         `^route\.passthrough\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 		},
 		{
 			name:            "empty socket valid map and invalid key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			keyName:         "non-existent-key",
 			failureExpected: true,
 		},
 		{
 			name:            "valid socket",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: false,
 		},
@@ -656,14 +656,14 @@ func TestHAProxyMapDelete(t *testing.T) {
 		{
 			name:            "valid socket but invalid key",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			keyName:         "invalid-key2",
 			failureExpected: false,
 		},
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			keyName:         `^route\.allow-http\.test(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 		},
@@ -677,7 +677,7 @@ func TestHAProxyMapDelete(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         "invalid-key4",
 			failureExpected: true,
 		},
@@ -691,7 +691,7 @@ func TestHAProxyMapDelete(t *testing.T) {
 		{
 			name:            "non-existent socket valid map and key",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			keyName:         `^reencrypt\.blueprints\.org(:[0-9]+)?(/.*)?$`,
 			failureExpected: true,
 		},
@@ -743,21 +743,21 @@ func TestHAProxyMapDeleteEntry(t *testing.T) {
 		{
 			name:            "empty socket valid map and key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			entryID:         "0x559a137bf730",
 			failureExpected: true,
 		},
 		{
 			name:            "empty socket valid map and invalid key",
 			sockFile:        "",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			entryID:         "non-existent-id",
 			failureExpected: true,
 		},
 		{
 			name:            "valid socket",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			entryID:         "0x559a137b4c10",
 			failureExpected: false,
 		},
@@ -778,14 +778,14 @@ func TestHAProxyMapDeleteEntry(t *testing.T) {
 		{
 			name:            "valid socket but invalid key",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			entryID:         "invalid-id",
 			failureExpected: false,
 		},
 		{
 			name:            "valid socket but typo map",
 			sockFile:        server.SocketFile(),
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map-1234",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map-1234",
 			entryID:         "0x559a137b4c10",
 			failureExpected: false,
 		},
@@ -799,7 +799,7 @@ func TestHAProxyMapDeleteEntry(t *testing.T) {
 		{
 			name:            "non-existent socket valid map",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			entryID:         "invalid-id",
 			failureExpected: true,
 		},
@@ -813,7 +813,7 @@ func TestHAProxyMapDeleteEntry(t *testing.T) {
 		{
 			name:            "non-existent socket valid map and key",
 			sockFile:        "/non-existent/fake-haproxy.sock",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			entryID:         "0x559a1400f8a0",
 			failureExpected: true,
 		},

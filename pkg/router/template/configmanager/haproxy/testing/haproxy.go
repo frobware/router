@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	haproxyConfigDir = "/var/lib/haproxy/conf"
+	haproxyConfigDir = "/tmp/lib/haproxy/conf"
 
 	serverName = "_dynamic-pod-1"
 
@@ -237,11 +237,11 @@ node: f27
 
 func (p *fakeHAProxy) listMaps() string {
 	return `# id (file) description
-1 (/var/lib/haproxy/conf/os_route_http_redirect.map) pattern loaded from file '/var/lib/haproxy/conf/os_route_http_redirect.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 68
-5 (/var/lib/haproxy/conf/os_sni_passthrough.map) pattern loaded from file '/var/lib/haproxy/conf/os_sni_passthrough.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 87
--1 (/var/lib/haproxy/conf/os_http_be.map) pattern loaded from file '/var/lib/haproxy/conf/os_http_be.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 71
--1 (/var/lib/haproxy/conf/os_tcp_be.map) pattern loaded from file '/var/lib/haproxy/conf/os_tcp_be.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 88
--1 (/var/lib/haproxy/conf/os_edge_reencrypt_be.map) pattern loaded from file '/var/lib/haproxy/conf/os_edge_reencrypt_be.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 127, by map at file '/var/lib/haproxy/conf/haproxy.config' line 163
+1 (/tmp/lib/haproxy/conf/os_route_http_redirect.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_route_http_redirect.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 68
+5 (/tmp/lib/haproxy/conf/os_sni_passthrough.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_sni_passthrough.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 87
+-1 (/tmp/lib/haproxy/conf/os_http_be.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_http_be.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 71
+-1 (/tmp/lib/haproxy/conf/os_tcp_be.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_tcp_be.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 88
+-1 (/tmp/lib/haproxy/conf/os_edge_reencrypt_be.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_edge_reencrypt_be.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 127, by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 163
 
 `
 }

@@ -273,9 +273,9 @@ be_secure:ns3:re2
 // TestShowMapCommandConverter tests show map command output with a converter.
 func TestShowMapCommandConverter(t *testing.T) {
 	listMapOutput := `# id (file) description
-1 (/var/lib/haproxy/conf/os_route_http_redirect.map) pattern loaded from file '/var/lib/haproxy/conf/os_route_http_redirect.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 68
-5 (/var/lib/haproxy/conf/os_sni_passthrough.map) pattern loaded from file '/var/lib/haproxy/conf/os_sni_passthrough.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 87
--1 (/var/lib/haproxy/conf/os_http_be.map) pattern loaded from file '/var/lib/haproxy/conf/os_http_be.map' used by map at file '/var/lib/haproxy/conf/haproxy.config' line 71
+1 (/tmp/lib/haproxy/conf/os_route_http_redirect.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_route_http_redirect.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 68
+5 (/tmp/lib/haproxy/conf/os_sni_passthrough.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_sni_passthrough.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 87
+-1 (/tmp/lib/haproxy/conf/os_http_be.map) pattern loaded from file '/tmp/lib/haproxy/conf/os_http_be.map' used by map at file '/tmp/lib/haproxy/conf/haproxy.config' line 71
 `
 
 	testCases := []struct {

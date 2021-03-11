@@ -50,7 +50,7 @@ import (
 )
 
 // defaultReloadInterval is how often to do reloads in seconds.
-const defaultReloadInterval = 5
+const defaultReloadInterval = 1
 
 // defaultCommitInterval is how often (in seconds) to commit the "in-memory"
 // router changes made using the dynamic configuration manager.
@@ -160,7 +160,7 @@ func getIntervalFromEnv(name string, defaultValSecs int) time.Duration {
 }
 
 func (o *TemplateRouter) Bind(flag *pflag.FlagSet) {
-	flag.StringVar(&o.WorkingDir, "working-dir", "/var/lib/haproxy", "The working directory for the router plugin")
+	flag.StringVar(&o.WorkingDir, "working-dir", "/tmp/lib/haproxy", "The working directory for the router plugin")
 	flag.StringVar(&o.DefaultCertificate, "default-certificate", env("DEFAULT_CERTIFICATE", ""), "The contents of a default certificate to use for routes that don't expose a TLS server cert; in PEM format")
 	flag.StringVar(&o.DefaultCertificatePath, "default-certificate-path", env("DEFAULT_CERTIFICATE_PATH", ""), "A path to default certificate to use for routes that don't expose a TLS server cert; in PEM format")
 	flag.StringVar(&o.DefaultCertificateDir, "default-certificate-dir", env("DEFAULT_CERTIFICATE_DIR", ""), "A path to a directory that contains a file named tls.crt. If tls.crt is not a PEM file which also contains a private key, it is first combined with a file named tls.key in the same directory. The PEM-format contents are then used as the default certificate. Only used if default-certificate and default-certificate-path are not specified.")
@@ -601,7 +601,7 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 			return err
 		}
 		cmopts := templateplugin.ConfigManagerOptions{
-			ConnectionInfo:         "unix:///var/lib/haproxy/run/haproxy.sock",
+			ConnectionInfo:         "unix:///tmp/lib/haproxy/run/haproxy.sock",
 			CommitInterval:         o.CommitInterval,
 			BlueprintRoutes:        blueprintRoutes,
 			BlueprintRoutePoolSize: o.BlueprintRoutePoolSize,
@@ -674,7 +674,7 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 	tnow := time.Now()
 	fmt.Println("factory.Create()")
 	controller := factory.Create(plugin, false, stopCh)
-	fmt.Println("factory.Created in ", time.Now().Sub(tnow).String())
+	fmt.Println("******************** factory.Created in ", time.Now().Sub(tnow).String())
 	controller.Run()
 
 	if blueprintPlugin != nil {

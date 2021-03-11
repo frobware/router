@@ -2,8 +2,8 @@
 
 set -o nounset
 
-config_file=/var/lib/nginx/conf/nginx.conf
-pid_file=/var/lib/nginx/run/nginx.pid
+config_file=/tmp/lib/nginx/conf/nginx.conf
+pid_file=/tmp/lib/nginx/run/nginx.pid
 
 if [ -f $pid_file ]; then
   # NGINX is running. Reloading NGINX with the new configuration. 

@@ -1,7 +1,7 @@
 {{/*
     nginx.conf: contains the main configuration file.
 */}}
-{{- define "/var/lib/nginx/conf/nginx.conf" -}}
+{{- define "/tmp/lib/nginx/conf/nginx.conf" -}}
 {{- $workingDir := .WorkingDir }}
 {{- $defaultDestinationCA := .DefaultDestinationCA }}
 {{ $httpAliases := getHTTPAliasesGroupedByHost .State }}
@@ -12,9 +12,9 @@ worker_processes  auto;
 {{ with $syslogAddress := env "ROUTER_SYSLOG_ADDRESS" }}
 error_log syslog:server={{ $syslogAddress }},facility={{env "ROUTER_LOG_FACILITY" "local1"}} {{ $logLevel }}; 
 {{ else }}
-error_log  /var/lib/nginx/log/error.log {{ $logLevel }};
+error_log  /tmp/lib/nginx/log/error.log {{ $logLevel }};
 {{ end }} 
-pid        /var/lib/nginx/run/nginx.pid;
+pid        /tmp/lib/nginx/run/nginx.pid;
 worker_rlimit_nofile 8192;
 worker_shutdown_timeout {{ env "ROUTER_DEFAULT_TUNNEL_TIMEOUT" "1h" }};
 
@@ -35,17 +35,17 @@ http {
 {{ with $syslogAddress := env "ROUTER_SYSLOG_ADDRESS" }}
   access_log syslog:server={{ $syslogAddress }},facility={{env "ROUTER_LOG_FACILITY" "local1"}},severity={{ $logLevel }} main;
 {{ else }}
-  access_log   /var/lib/nginx/log/access.log  main;
+  access_log   /tmp/lib/nginx/log/access.log  main;
 {{ end }}
   sendfile     on;
   tcp_nopush   on;
   server_names_hash_bucket_size 256;
 
-  proxy_temp_path /var/lib/nginx/cache/proxy_temp;
-  client_body_temp_path /var/lib/nginx/cache/client_temp;
-  fastcgi_temp_path /var/lib/nginx/cache/fastcgi_temp;
-  uwsgi_temp_path /var/lib/nginx/cache/uwsgi_temp;
-  scgi_temp_path /var/lib/nginx/cache/scgi_temp;
+  proxy_temp_path /tmp/lib/nginx/cache/proxy_temp;
+  client_body_temp_path /tmp/lib/nginx/cache/client_temp;
+  fastcgi_temp_path /tmp/lib/nginx/cache/fastcgi_temp;
+  uwsgi_temp_path /tmp/lib/nginx/cache/uwsgi_temp;
+  scgi_temp_path /tmp/lib/nginx/cache/scgi_temp;
 
   keepalive_timeout {{ env "ROUTER_SLOWLORIS_HTTP_KEEPALIVE" "300s" }};
 
@@ -142,7 +142,7 @@ http {
     }
     
     location = /error-page-503.html {
-      root /var/lib/nginx/conf;
+      root /tmp/lib/nginx/conf;
     }
   }
 
@@ -325,7 +325,7 @@ stream {
     {{ with $syslogAddress := env "ROUTER_SYSLOG_ADDRESS" }}
     access_log syslog:server={{ $syslogAddress }},facility={{env "ROUTER_LOG_FACILITY" "local1"}},severity={{ $logLevel }} passthrough;
     {{ else }}
-    access_log /var/lib/nginx/log/passthrough_access.log passthrough;
+    access_log /tmp/lib/nginx/log/passthrough_access.log passthrough;
     {{ end }}
     proxy_pass $dest_passthrough;
     ssl_preread on;
@@ -375,7 +375,7 @@ stream {
     {{ with $syslogAddress := env "ROUTER_SYSLOG_ADDRESS" }}
     access_log syslog:server={{ $syslogAddress }},facility={{env "ROUTER_LOG_FACILITY" "local1"}},severity={{ $logLevel }} internal_passthrough;
     {{ else }}
-    access_log /var/lib/nginx/log/internal_passthrough_access.log internal_passthrough;
+    access_log /tmp/lib/nginx/log/internal_passthrough_access.log internal_passthrough;
     {{ end }}
 
     ssl_preread on;

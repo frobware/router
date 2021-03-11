@@ -557,32 +557,32 @@ func TestClientFindMap(t *testing.T) {
 		},
 		{
 			name:            "existing redirect map",
-			mapName:         "/var/lib/haproxy/conf/os_route_http_redirect.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_route_http_redirect.map",
 			failureExpected: false,
 		},
 		{
 			name:            "existing sni passthru map",
-			mapName:         "/var/lib/haproxy/conf/os_sni_passthrough.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_sni_passthrough.map",
 			failureExpected: false,
 		},
 		{
 			name:            "existing http be map",
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map",
 			failureExpected: false,
 		},
 		{
 			name:            "existing tcp be map",
-			mapName:         "/var/lib/haproxy/conf/os_tcp_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_tcp_be.map",
 			failureExpected: false,
 		},
 		{
 			name:            "existing edge and reencrypt map",
-			mapName:         "/var/lib/haproxy/conf/os_edge_reencrypt_be.map",
+			mapName:         "/tmp/lib/haproxy/conf/os_edge_reencrypt_be.map",
 			failureExpected: false,
 		},
 		{
 			name:            "bad backend name typo",
-			mapName:         "/var/lib/haproxy/conf/os_http_be.map.with.typo",
+			mapName:         "/tmp/lib/haproxy/conf/os_http_be.map.with.typo",
 			failureExpected: true,
 		},
 	}

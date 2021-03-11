@@ -163,6 +163,9 @@ func ExtendedValidateRoute(route *routev1.Route) field.ErrorList {
 		return result
 	}
 
+	return nil
+	fmt.Println("ExtendedValidateRoute", route.Name)
+
 	tlsFieldPath := field.NewPath("spec").Child("tls")
 	if errs := validateTLS(route, tlsFieldPath); len(errs) != 0 {
 		result = append(result, errs...)

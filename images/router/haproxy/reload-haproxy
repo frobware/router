@@ -2,8 +2,8 @@
 
 set -o nounset
 
-config_file=/var/lib/haproxy/conf/haproxy.config
-pid_file=/var/lib/haproxy/run/haproxy.pid
+config_file=/tmp/lib/haproxy/conf/haproxy.config
+pid_file=/tmp/lib/haproxy/run/haproxy.pid
 readonly timeout_opts="-m 1 --connect-timeout 1"
 
 readonly max_wait_time=30
@@ -92,7 +92,7 @@ fi
 
 reload_status=0
 if [ -n "$old_pids" ]; then
-  /usr/sbin/haproxy -f $config_file -p $pid_file -x /var/lib/haproxy/run/haproxy.sock -sf $old_pids
+  /usr/sbin/haproxy -f $config_file -p $pid_file -x /tmp/lib/haproxy/run/haproxy.sock -sf $old_pids
   reload_status=$?
 else
   /usr/sbin/haproxy -f $config_file -p $pid_file

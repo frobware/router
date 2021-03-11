@@ -106,19 +106,19 @@ func (f *RouterControllerFactory) Create(plugin router.Plugin, watchNodes bool, 
 	}
 
 	startTime := time.Now()
-	fmt.Println("f.initInformers")
+	log.V(2).Info("f.initInformers")
 	f.initInformers(rc, stopCh)
-	fmt.Println("f.initInformers DONE IN", time.Now().Sub(startTime).String())
+	log.V(2).Info("f.initInformers DONE IN", time.Now().Sub(startTime).String())
 
 	startTime = time.Now()
-	fmt.Println("f.processExistingItems")
+	log.V(2).Info("f.processExistingItems")
 	f.processExistingItems(rc)
-	fmt.Println("f.processExistingItems DONE IN ", time.Now().Sub(startTime).String())
+	log.V(2).Info("f.processExistingItems DONE IN ", time.Now().Sub(startTime).String())
 
 	startTime = time.Now()
-	fmt.Println("f.registerInformerEventHandlers")
+	log.V(2).Info("f.registerInformerEventHandlers")
 	f.registerInformerEventHandlers(rc)
-	fmt.Println("f.registerInformerEventHandlers DONE IN", time.Now().Sub(startTime).String())
+	log.V(2).Info("f.registerInformerEventHandlers DONE IN", time.Now().Sub(startTime).String())
 
 	return rc
 }
