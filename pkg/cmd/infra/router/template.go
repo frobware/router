@@ -671,7 +671,10 @@ func (o *TemplateRouterOptions) Run(stopCh <-chan struct{}) error {
 	plugin = controller.NewUniqueHost(plugin, o.RouterSelection.DisableNamespaceOwnershipCheck, recorder)
 	plugin = controller.NewHostAdmitter(plugin, o.RouteAdmissionFunc(), o.AllowWildcardRoutes, o.RouterSelection.DisableNamespaceOwnershipCheck, recorder)
 
+	tnow := time.Now()
+	fmt.Println("factory.Create()")
 	controller := factory.Create(plugin, false, stopCh)
+	fmt.Println("factory.Created in ", time.Now().Sub(tnow).String())
 	controller.Run()
 
 	if blueprintPlugin != nil {
