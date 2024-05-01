@@ -2,8 +2,8 @@
 
 export GOOS=linux
 
-REGISTRY ?= quay.io
-IMAGE ?= openshift/openshift-router
+REGISTRY ?= registry.int.frobware.com
+IMAGE ?= aim/openshift-router
 TAG ?= latest
 IMAGEBUILDER ?= podman
 
