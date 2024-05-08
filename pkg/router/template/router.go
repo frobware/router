@@ -502,8 +502,7 @@ func (r *templateRouter) Commit() {
 	}
 }
 
-// commitAndReload refreshes the backend and persists the router state.
-func (r *templateRouter) commitAndReload() error {
+func (r *templateRouter) commitConfig() error {
 	// only state changes must be done under the lock
 	if err := func() error {
 		r.lock.Lock()
@@ -528,6 +527,16 @@ func (r *templateRouter) commitAndReload() error {
 	for i, fn := range r.reloadCallbacks {
 		log.V(4).Info("calling reload function", "fn", i)
 		fn()
+	}
+
+	return nil
+}
+
+// commitReload refreshes the backend and persists the
+// router state.
+func (r *templateRouter) commitAndReload() error {
+	if err := r.commitConfig(); err != nil {
+		return err
 	}
 
 	log.V(4).Info("reloading the router")

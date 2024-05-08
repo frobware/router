@@ -4,9 +4,12 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -166,6 +169,17 @@ func NewTemplatePlugin(cfg TemplatePluginConfig, lookupSvc ServiceLookup) (*Temp
 		httpRequestHeaders:            cfg.HTTPRequestHeaders,
 	}
 	router, err := newTemplateRouter(templateRouterCfg)
+
+	sigUSR2Handler := make(chan os.Signal, 1)
+	signal.Notify(sigUSR2Handler, syscall.SIGUSR2)
+
+	go func() {
+		for {
+			<-sigUSR2Handler
+			fmt.Println("HANDLING SIGUSR2")
+			router.commitConfig()
+		}
+	}()
 	return newDefaultTemplatePlugin(router, cfg.IncludeUDP, lookupSvc), err
 }
 
