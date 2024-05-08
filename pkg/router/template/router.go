@@ -539,6 +539,17 @@ func (r *templateRouter) commitAndReload() error {
 		return err
 	}
 
+	fmt.Printf(`
+ _________
+< RELOAD! >
+ ---------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+`)
+
 	log.V(4).Info("reloading the router")
 	reloadStart := time.Now()
 	err := r.reloadRouter(false)
