@@ -7,8 +7,10 @@ IMAGE ?= aim/openshift-router
 TAG ?= latest
 IMAGEBUILDER ?= podman
 
-new-openshift-router-image:
+build:
 	GO111MODULE=on CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -o openshift-router -gcflags=all="-N -l" ./cmd/openshift-router
+
+new-openshift-router-image: build
 	$(IMAGEBUILDER) build -t $(IMAGE):$(TAG) -f hack/Dockerfile.debug .
 
 push:
@@ -28,3 +30,12 @@ dwim:  new-openshift-router-image push set-image
 reset:
 	oc scale --replicas 1 -n openshift-cluster-version deployments/cluster-version-operator
 	oc scale --replicas 1 -n openshift-ingress-operator deployments ingress-operator
+
+ROUTER_POD = $(shell oc get pods -n openshift-ingress -o=jsonpath='{.items[*].metadata.name}' | head -n1)
+
+remote-debug-openshift-router: build
+	oc -n openshift-ingress cp ./openshift-router $(ROUTER_POD):/usr/bin/openshift-router
+	oc -n openshift-ingress rsh $(ROUTER_POD) dlv --listen=:7000 --api-version=2 --headless --continue --accept-multiclient exec /usr/bin/openshift-router -- --stats-port=1938
+
+verify:
+	@echo ROUTER_POD=$(ROUTER_POD)
