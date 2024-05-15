@@ -539,7 +539,7 @@ func (r *templateRouter) commitAndReload() error {
 		return err
 	}
 
-	fmt.Printf(`
+	fmt.Printf(`RELOAD
  _________
 < RELOAD! >
  ---------

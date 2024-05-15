@@ -11,7 +11,7 @@ build:
 	GO111MODULE=on CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -o openshift-router -gcflags=all="-N -l" ./cmd/openshift-router
 
 new-openshift-router-image: build
-	$(IMAGEBUILDER) build -t $(IMAGE):$(TAG) -f hack/Dockerfile.debug .
+	$(IMAGEBUILDER) build -t $(IMAGE):$(TAG) -f hack/Dockerfile.remote-dev .
 
 push:
 	$(IMAGEBUILDER) tag $(IMAGE):$(TAG) $(REGISTRY)/$(IMAGE):$(TAG)
@@ -38,7 +38,7 @@ remote-debug-port-forward:
 
 remote-debug-openshift-router: build
 	oc -n openshift-ingress cp -c router ./openshift-router $(ROUTER_POD):/usr/bin/openshift-router
-	oc -n openshift-ingress rsh $(ROUTER_POD) dlv --listen=:7000 --api-version=2 --headless=true --accept-multiclient exec /usr/bin/openshift-router -- --stats-port=1938
+	oc -n openshift-ingress rsh -t $(ROUTER_POD) dlv --listen=:7000 --api-version=2 --headless=true --accept-multiclient exec --continue /usr/bin/openshift-router -- --stats-port=1938 2>&1 | tee /proc/1/fd/1
 
 verify:
 	@echo ROUTER_POD=$(ROUTER_POD)
