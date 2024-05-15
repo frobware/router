@@ -2,7 +2,8 @@ FROM fedora:38
 RUN yum update -y
 RUN yum install -y https://github.com/frobware/haproxy-builds/raw/master/rhaos-4.16-rhel-9/haproxy28-2.8.5-1.rhaos4.16.el9.x86_64.rpm
 RUN haproxy -vv
-RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs which rsync git" && \
+RUN dnf groupinstall -y "Development Tools"
+RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs which rsync git wget golang" && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum clean all && \
@@ -12,6 +13,20 @@ RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs whic
     setcap 'cap_net_bind_service=ep' /usr/sbin/haproxy && \
     chown -R :0 /var/lib/haproxy && \
     chmod -R g+w /var/lib/haproxy
+
+      # volumes:
+      # - name: nfs-storage
+      #   persistentVolumeClaim:
+      #     claimName: nfs-pvc
+
+        # volumeMounts:
+        # - mountPath: /etc/rsyslog
+        #   name: rsyslog-config
+        # - mountPath: /var/lib/rsyslog
+        #   name: rsyslog-socket
+
+        # - mountPath: /src
+        #   name: nfs-storage
 
         # securityContext:
         #   allowPrivilegeEscalation: true
@@ -28,14 +43,14 @@ RUN touch /var/log/wtmp && touch /var/log/lastlog && touch /var/run/utmp
 RUN dnf -y update && \
     dnf -y install openssh-server
 
-RUN ssh-keygen -Av
-
 # Configure SSH
 RUN mkdir /var/run/sshd && \
     echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
-    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
     echo 'Port 2222' >> /etc/ssh/sshd_config
 
+RUN ssh-keygen -Av
+RUN mkdir -p /src
 RUN useradd -ms /bin/bash user && echo 'user:user' | chpasswd
 
 # Create .ssh directory for the user with appropriate permissions.
