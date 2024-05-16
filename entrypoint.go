@@ -22,6 +22,6 @@ func main() {
 		os.Exit(0)
 	}()
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port),
-		func(w http.ResponseWriter, r *http.Request) {}))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), func(w http.ResponseWriter, r *http.Request) {
+	}))
 }

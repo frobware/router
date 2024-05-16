@@ -14,6 +14,8 @@ RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs whic
     chown -R :0 /var/lib/haproxy && \
     chmod -R g+w /var/lib/haproxy
 
+# % export JETBRAINS_CLIENT_JDK=/nix/store/2av4k7bwr1j7g9lr8f018m5l17ac1jny-jetbrains-jdk-jcef-17.0.8-b1000.8/lib/openjdk
+
       # volumes:
       # - name: nfs-storage
       #   persistentVolumeClaim:

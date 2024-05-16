@@ -43,6 +43,7 @@ func main() {
 func CommandFor(basename string) *cobra.Command {
 	var cmd *cobra.Command
 
+	basename = "openshift-router"
 	switch basename {
 	case "openshift-router", "openshift-haproxy-router":
 		cmd = router.NewCommandTemplateRouter(basename)
