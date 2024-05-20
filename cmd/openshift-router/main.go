@@ -24,6 +24,8 @@ func main() {
 	defer serviceability.Profile(os.Getenv("OPENSHIFT_PROFILE")).Stop()
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	fmt.Println(os.Environ())
+
 	cmd := CommandFor(filepath.Base(os.Args[0]))
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
