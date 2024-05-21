@@ -16,11 +16,11 @@ func main() {
 	log.Printf("Server starting on port %d", port)
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
 	go func() {
 		<-sigChan
-		log.Println("SIGTERM received, shutting down...")
+		log.Println("SIGTERM|SIGINT received, shutting down...")
 		os.Exit(0)
 	}()
 

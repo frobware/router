@@ -3,7 +3,7 @@ RUN yum update -y
 RUN yum install -y https://github.com/frobware/haproxy-builds/raw/master/rhaos-4.16-rhel-9/haproxy28-2.8.5-1.rhaos4.16.el9.x86_64.rpm
 RUN haproxy -vv
 RUN dnf groupinstall -y "Development Tools"
-RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs which rsync git wget golang" && \
+RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs which rsync git wget golang tini openssh-server" && \
     yum install -y $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum clean all && \
@@ -40,10 +40,6 @@ RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs whic
         #     - AUDIT_CONTROL
 
 RUN touch /var/log/wtmp && touch /var/log/lastlog && touch /var/run/utmp
-
-# Install required packages and SSH server
-RUN dnf -y update && \
-    dnf -y install openssh-server
 
 # Configure SSH
 RUN mkdir /var/run/sshd && \
@@ -85,6 +81,6 @@ WORKDIR /var/lib/haproxy/conf
 ENV XDG_CONFIG_HOME=/tmp \
     TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template \
     RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy
-ENTRYPOINT ["/usr/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "-vvv", "-s", "--", "/usr/bin/entrypoint.sh"]
 
 #ENTRYPOINT ["/usr/bin/dlv", "exec", "--log", "--api-version=2", "--headless", "--accept-multiclient", "--continue", "--listen=:7000", "/usr/bin/openshift-router", "--", "--v=2"]
