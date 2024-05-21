@@ -7,7 +7,6 @@ cleanup() {
 
 trap 'cleanup' SIGTERM
 
-dropbear -E -p 2222
-
+/usr/sbin/sshd
 /usr/bin/entrypoint
 
