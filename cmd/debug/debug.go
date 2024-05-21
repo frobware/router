@@ -151,7 +151,7 @@ func writeEnvFile(deployment *v1.Deployment, event, envFilePath string, clientse
 	envFileContent := extractEnvVars(deployment, clientset)
 
 	if envFileContent == lastEnvContent {
-		fmt.Printf("No changes in environment variables. Skipping file write. Event: %s\n", event)
+		// fmt.Printf("No changes in environment variables. Skipping file write. Event: %s\n", event)
 		return
 	}
 
