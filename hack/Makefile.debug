@@ -36,13 +36,9 @@ ROUTER_POD = $(shell oc get pods -n openshift-ingress -o=jsonpath='{.items[*].me
 remote-debug-port-forward:
 	oc port-forward -n openshift-ingress deployment/router-default --address 127.0.0.1 7000:7000
 
-remote-debug-openshift-router: build
-	oc -n openshift-ingress cp -c router ./openshift-router $(ROUTER_POD):/usr/bin/openshift-router
-	oc -n openshift-ingress rsh -t $(ROUTER_POD) dlv --listen=:7000 --api-version=2 --headless=true --accept-multiclient exec --continue /usr/bin/openshift-router -- --stats-port=1938 2>&1 | tee /proc/1/fd/1
-
 remote-debug-openshift-router-via-ssh: build
-	scp -C ./openshift-router container:/usr/bin/openshift-router
-	ssh -t root@container dlv --listen=:7000 --api-version=2 --headless=true --accept-multiclient --allow-non-terminal-interactive exec /usr/bin/openshift-router -- --stats-port=1938
+	rsync ./openshift-router container:/usr/bin/openshift-router
+	ssh -t root@container dlv --listen=:7000 --api-version=2 --headless=true --accept-multiclient exec --continue /usr/bin/openshift-router
 
 verify:
 	@echo ROUTER_POD=$(ROUTER_POD)

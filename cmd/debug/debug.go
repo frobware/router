@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -62,14 +61,11 @@ func main() {
 		fields.Everything(),
 	)
 
-	// Create an informer with options
-	options := cache.SharedIndexInformerOptions{
-		ResyncPeriod: 30 * time.Second,
-	}
+	// Create an informer
 	informer := cache.NewSharedIndexInformer(
 		deploymentListWatcher,
 		&v1.Deployment{},
-		options.ResyncPeriod,
+		0, // Disable resync
 		cache.Indexers{},
 	)
 
@@ -85,6 +81,12 @@ func main() {
 			deployment := newObj.(*v1.Deployment)
 			if deployment.Name == deploymentName {
 				writeEnvFile(deployment, "UpdateFunc", envFilePath)
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			deployment := obj.(*v1.Deployment)
+			if deployment.Name == deploymentName {
+				fmt.Printf("Deployment %s/%s deleted. Event: DeleteFunc\n", namespace, deploymentName)
 			}
 		},
 	})
@@ -128,6 +130,11 @@ func extractEnvVars(deployment *v1.Deployment) string {
 			envFileContent += fmt.Sprintf("export %s=%s\n", env.Name, env.Value)
 		}
 	}
+
+	// These are specified in the Dockerfile as explicit ENV
+	// variables.
+	envFileContent += "export TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template"
+	envFileContent += "export RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy"
 
 	return envFileContent
 }
