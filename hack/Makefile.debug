@@ -52,3 +52,6 @@ dup-pod-env:
 	oc exec $(ROUTER_POD) -- env > pod_env.txt
 	scp pod_env.txt root@container:/root
 	ssh root@container 'echo "set -a" >> ~/.bashrc && echo "source /root/pod_env.txt" >> ~/.bashrc'
+
+start-sshd:
+	oc exec $(ROUTER_POD) -- /usr/sbin/sshd
