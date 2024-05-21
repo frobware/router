@@ -81,6 +81,6 @@ WORKDIR /var/lib/haproxy/conf
 ENV XDG_CONFIG_HOME=/tmp \
     TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template \
     RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy
-ENTRYPOINT ["/usr/bin/tini", "-v", "-s", "--", "/usr/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "-v", "-s", "--", "/usr/bin/entrypoint"]
 
 #ENTRYPOINT ["/usr/bin/dlv", "exec", "--log", "--api-version=2", "--headless", "--accept-multiclient", "--continue", "--listen=:7000", "/usr/bin/openshift-router", "--", "--v=2"]

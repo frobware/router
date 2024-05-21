@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
@@ -50,6 +52,12 @@ func main() {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		fmt.Printf("Error creating Kubernetes client: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Start SSHD
+	if err := startSSHD(); err != nil {
+		fmt.Printf("Error starting SSHD: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -104,6 +112,37 @@ func main() {
 	fmt.Println("Shutting down...")
 }
 
+func startSSHD() error {
+	cmd := exec.Command("/usr/sbin/sshd", "-D")
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	go func() {
+		io.Copy(os.Stdout, stdoutPipe)
+	}()
+
+	go func() {
+		io.Copy(os.Stderr, stderrPipe)
+	}()
+
+	go func() {
+		if err := cmd.Wait(); err != nil {
+			fmt.Printf("SSHD exited with error: %v\n", err)
+		}
+	}()
+	return nil
+}
+
 func writeEnvFile(deployment *v1.Deployment, event, envFilePath string) {
 	envFileContent := extractEnvVars(deployment)
 
@@ -131,10 +170,10 @@ func extractEnvVars(deployment *v1.Deployment) string {
 		}
 	}
 
-	// These are specified in the Dockerfile as explicit ENV
-	// variables.
-	envFileContent += "export TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template"
-	envFileContent += "export RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy"
+	// These two variables are specified in the Dockerfile as
+	// explicit ENV variables.
+	envFileContent += "export TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template\n"
+	envFileContent += "export RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy\n"
 
 	return envFileContent
 }
