@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -22,7 +23,15 @@ const (
 	namespace      = "openshift-ingress"
 )
 
+var lastEnvContent string
+
 func main() {
+	var envFilePath string
+
+	// Parse the command-line arguments
+	flag.StringVar(&envFilePath, "env-file", "/etc/profile.d/router-default.sh", "Path to the environment file")
+	flag.Parse()
+
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		// Fallback to local config
@@ -69,13 +78,13 @@ func main() {
 		AddFunc: func(obj interface{}) {
 			deployment := obj.(*v1.Deployment)
 			if deployment.Name == deploymentName {
-				writeEnvFile(deployment)
+				writeEnvFile(deployment, "AddFunc", envFilePath)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			deployment := newObj.(*v1.Deployment)
 			if deployment.Name == deploymentName {
-				writeEnvFile(deployment)
+				writeEnvFile(deployment, "UpdateFunc", envFilePath)
 			}
 		},
 	})
@@ -93,18 +102,22 @@ func main() {
 	fmt.Println("Shutting down...")
 }
 
-func writeEnvFile(deployment *v1.Deployment) {
+func writeEnvFile(deployment *v1.Deployment, event, envFilePath string) {
 	envFileContent := extractEnvVars(deployment)
-	fmt.Println(envFileContent)
 
-	filename := fmt.Sprintf("/etc/profile.d/%s.sh", deploymentName)
-	err := os.WriteFile(filename, []byte(envFileContent), 0644)
+	if envFileContent == lastEnvContent {
+		fmt.Printf("No changes in environment variables. Skipping file write. Event: %s\n", event)
+		return
+	}
+
+	err := os.WriteFile(envFilePath, []byte(envFileContent), 0644)
 	if err != nil {
 		fmt.Printf("Error writing to file: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Deployment %s/%s environment variables written to %s\n", namespace, deploymentName, filename)
+	lastEnvContent = envFileContent
+	fmt.Printf("Deployment %s/%s environment variables written to %s. Event: %s\n", namespace, deploymentName, envFilePath, event)
 }
 
 func extractEnvVars(deployment *v1.Deployment) string {
