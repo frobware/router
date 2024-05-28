@@ -22,6 +22,8 @@ set-image:
 	oc scale --replicas 0 -n openshift-ingress-operator deployments ingress-operator
 	oc -n openshift-ingress scale deployment --replicas=0 router-default
 	oc -n openshift-ingress patch deployment router-default -p '{"spec":{"template":{"spec":{"$$setElementOrder/containers":[{"name":"router"}],"containers":[{"imagePullPolicy":"Always","name":"router"}]}}}}'
+	oc -n openshift-ingress patch deployment router-default -p '{"spec":{"template":{"spec":{"$setElementOrder/containers":[{"name":"router"}],"containers":[{"livenessProbe":null,"name":"router","readinessProbe":null,"startupProbe":null}]}}}}'
+	oc patch -n openshift-ingress deployment/router-default --patch='{"spec":{"template":{"spec":{"securityContext":{"runAsUser":0}}}}}'
 	oc -n openshift-ingress set image deployment/router-default router=$(REGISTRY)/$(IMAGE):$(TAG)
 	oc -n openshift-ingress scale deployment --replicas=1 router-default
 

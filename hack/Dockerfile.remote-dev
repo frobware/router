@@ -1,6 +1,6 @@
 FROM fedora:38
 RUN yum update -y
-RUN yum install -y https://github.com/frobware/haproxy-builds/raw/master/rhaos-4.16-rhel-9/haproxy28-2.8.5-1.rhaos4.16.el9.x86_64.rpm
+RUN yum install -y https://github.com/frobware/haproxy-builds/raw/master/rhaos-4.16-rhel-9/haproxy28-2.8.5-2.rhaos4.16.el9.x86_64.rpm
 RUN haproxy -vv
 RUN dnf groupinstall -y "Development Tools"
 RUN INSTALL_PKGS="rsyslog procps-ng util-linux socat lsof strace fuse-sshfs which rsync git wget golang tini openssh-server" && \
