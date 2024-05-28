@@ -39,3 +39,17 @@ remote-debug-openshift-router-via-ssh: build
 
 verify:
 	@echo ROUTER_POD=$(ROUTER_POD)
+
+SERVICE_FILES := oc-port-forward-2222.service oc-port-forward-7000.service
+SYSTEMD_DIR := $(HOME)/.config/systemd/user
+
+.PHONY: install-port-forward-services
+
+install-port-forward-services: $(SERVICE_FILES:%=$(SYSTEMD_DIR)/%)
+
+$(SYSTEMD_DIR)/%: $(wildcard hack/%) $(wildcard %)
+	@mkdir -p $(SYSTEMD_DIR)
+	@test -f $(or $(wildcard hack/$*), $(wildcard $*)) || { echo "Error: $* not found."; exit 1; }
+	install -m 644 $(or $(wildcard hack/$*), $(wildcard $*)) $@
+	systemctl --user daemon-reload
+	systemctl --user enable --now $*
