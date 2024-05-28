@@ -1,5 +1,5 @@
 [Unit]
-Description=Persistent oc port-forward service for port 7000 (SSH)
+Description=Persistent oc port-forward service for port 7000 (Delve debugger)
 
 [Service]
 RestartSec=3
