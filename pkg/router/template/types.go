@@ -1,6 +1,7 @@
 package templaterouter
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"time"
 
@@ -230,6 +231,7 @@ type ConfigManager interface {
 
 	// GenerateDynamicServerNames generates the dynamic server names.
 	GenerateDynamicServerNames(id ServiceAliasConfigKey) []string
+	HackAttack(v *prometheus.CounterVec)
 }
 
 // CaptureHTTPHeader specifies an HTTP header that should be captured for access

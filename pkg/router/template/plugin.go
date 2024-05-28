@@ -169,7 +169,7 @@ func NewTemplatePlugin(cfg TemplatePluginConfig, lookupSvc ServiceLookup) (*Temp
 		httpRequestHeaders:            cfg.HTTPRequestHeaders,
 	}
 	router, err := newTemplateRouter(templateRouterCfg)
-
+	router.dynamicConfigManager.HackAttack(router.metricReloadCounter)
 	sigUSR2Handler := make(chan os.Signal, 1)
 	signal.Notify(sigUSR2Handler, syscall.SIGUSR2)
 
