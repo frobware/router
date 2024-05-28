@@ -128,6 +128,12 @@ type templateRouter struct {
 	httpResponseHeaders []HTTPHeader
 	// httpRequestHeaders allows users to set or delete custom HTTP request headers.
 	httpRequestHeaders []HTTPHeader
+
+	// metricReloadCount tracks the number of full reloads.
+	metricReloadCount prometheus.Counter
+	// metricDynamicReloadCount tracks the number of dynamic
+	// reloads.
+	metricDynamicReloadCount prometheus.Counter
 }
 
 // templateRouterCfg holds all configuration items required to initialize the template router
@@ -220,6 +226,20 @@ func newTemplateRouter(cfg templateRouterCfg) (*templateRouter, error) {
 		return nil, err
 	}
 
+	metricsReloadCount := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "template_router",
+		Name:      "reload_count",
+		Help:      "Counts the number of times the router reloads.",
+	})
+	prometheus.MustRegister(metricsReloadCount)
+
+	metricsDynamicReloadCount := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "template_router",
+		Name:      "dynamic_reload_count",
+		Help:      "Counts the number of times the router dynamically reloads.",
+	})
+	prometheus.MustRegister(metricsDynamicReloadCount)
+
 	metricsReload := prometheus.NewSummary(prometheus.SummaryOpts{
 		Namespace: "template_router",
 		Name:      "reload_seconds",
@@ -266,9 +286,11 @@ func newTemplateRouter(cfg templateRouterCfg) (*templateRouter, error) {
 		httpResponseHeaders:           cfg.httpResponseHeaders,
 		httpRequestHeaders:            cfg.httpRequestHeaders,
 
-		metricReload:        metricsReload,
-		metricReloadFailure: metricReloadFailure,
-		metricWriteConfig:   metricWriteConfig,
+		metricReload:             metricsReload,
+		metricReloadFailure:      metricReloadFailure,
+		metricWriteConfig:        metricWriteConfig,
+		metricReloadCount:        metricsReloadCount,
+		metricDynamicReloadCount: metricsDynamicReloadCount,
 
 		rateLimitedCommitFunction: nil,
 	}
@@ -551,6 +573,7 @@ func (r *templateRouter) commitAndReload() error {
 `)
 
 	log.V(4).Info("reloading the router")
+	r.metricReloadCount.Inc()
 	reloadStart := time.Now()
 	err := r.reloadRouter(false)
 	r.metricReload.Observe(float64(time.Now().Sub(reloadStart)) / float64(time.Second))
