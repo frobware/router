@@ -61,9 +61,14 @@ install-port-forward-services: $(patsubst %, $(SYSTEMD_DIR)/%, $(SERVICE_FILES))
 #
 # - 'wildcard %' checks for the service file in the current directory.
 #
-# This allows the Makefile to be invoked either from the top directory
-# with 'make -C hack -f Makefile.debug' or directly within the 'hack'
-# directory with 'make -f Makefile.debug'.
+# Possible invocations:
+#
+# $ make -C hack -f Makefile.debug
+# $ make -f hack/Makefile.debug
+#
+# or within the hack directory itself as:
+#
+# $ make -f Makefile.debug
 $(SYSTEMD_DIR)/%: $(wildcard hack/%) $(wildcard %) | $(SYSTEMD_DIR)
 	@test -f $(or $(wildcard hack/$*), $(wildcard $*)) || { echo "Error: $* not found."; exit 1; }
 	install -m 644 $(or $(wildcard hack/$*), $(wildcard $*)) $@
