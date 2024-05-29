@@ -569,6 +569,7 @@ func (cm *haproxyConfigManager) ReplaceRouteEndpoints(id templaterouter.ServiceA
 
 	log.V(2).Info("committing backend", "backend", backendName)
 	cm.metricReloadCounter.With(prometheus.Labels{"type": "dynamic"}).Inc()
+	log.V(0).Info("DYNAMIC RELOAD")
 	return backend.Commit()
 }
 
