@@ -552,19 +552,6 @@ func (r *templateRouter) commitAndReload() error {
 		return err
 	}
 
-	log.V(0).Info("FULL RELOAD")
-
-	// 	fmt.Printf(`
-	//  ______________
-	// < FULL RELOAD! >
-	//  --------------
-	//         \   ^__^
-	//          \  (oo)\_______
-	//             (__)\       )\/\
-	//                 ||----w |
-	//                 ||     ||
-	// `)
-
 	log.V(4).Info("reloading the router")
 	reloadStart := time.Now()
 	err := r.reloadRouter(false)
@@ -668,9 +655,30 @@ func (r *templateRouter) writeCertificates(cfg *ServiceAliasConfig) error {
 	return nil
 }
 
+func getCounterValue(label string) float64 {
+	metrics, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		return 0
+	}
+
+	for _, m := range metrics {
+		if *m.Name == "template_router_reload_total" {
+			for _, metric := range m.Metric {
+				for _, lbl := range metric.Label {
+					if *lbl.Name == "type" && *lbl.Value == label {
+						return *metric.Counter.Value
+					}
+				}
+			}
+		}
+	}
+	return 0 //, fmt.Errorf("counter with label %s not found", label)
+}
+
 // reloadRouter executes the router's reload script.
 func (r *templateRouter) reloadRouter(shutdown bool) error {
 	r.metricReloadCounter.With(prometheus.Labels{"type": "full"}).Inc()
+	log.V(0).Info("FULL RELOAD", "count", fmt.Sprintf("%d", int(getCounterValue("full"))))
 
 	if r.reloadFn != nil {
 		return r.reloadFn(shutdown)
