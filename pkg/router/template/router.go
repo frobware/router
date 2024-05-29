@@ -552,16 +552,18 @@ func (r *templateRouter) commitAndReload() error {
 		return err
 	}
 
-	fmt.Printf(`RELOAD
- _________
-< RELOAD! >
- ---------
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
-`)
+	log.V(0).Info("FULL RELOAD")
+
+	// 	fmt.Printf(`
+	//  ______________
+	// < FULL RELOAD! >
+	//  --------------
+	//         \   ^__^
+	//          \  (oo)\_______
+	//             (__)\       )\/\
+	//                 ||----w |
+	//                 ||     ||
+	// `)
 
 	log.V(4).Info("reloading the router")
 	reloadStart := time.Now()
