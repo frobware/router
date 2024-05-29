@@ -569,7 +569,28 @@ func (cm *haproxyConfigManager) ReplaceRouteEndpoints(id templaterouter.ServiceA
 
 	log.V(2).Info("committing backend", "backend", backendName)
 	cm.metricReloadCounter.With(prometheus.Labels{"type": "dynamic"}).Inc()
-	log.V(0).Info("DYNAMIC RELOAD")
+
+	getCounterValue := func(label string) float64 {
+		metrics, err := prometheus.DefaultGatherer.Gather()
+		if err != nil {
+			return 0
+		}
+
+		for _, m := range metrics {
+			if *m.Name == "template_router_reload_total" {
+				for _, metric := range m.Metric {
+					for _, lbl := range metric.Label {
+						if *lbl.Name == "type" && *lbl.Value == label {
+							return *metric.Counter.Value
+						}
+					}
+				}
+			}
+		}
+		return 0 //, fmt.Errorf("counter with label %s not found", label)
+	}
+
+	log.V(0).Info("DYNAMIC RELOAD", "count", fmt.Sprintf("%d", int(getCounterValue("dynamic"))))
 	return backend.Commit()
 }
 
