@@ -12,6 +12,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -428,8 +429,8 @@ func (e *Exporter) scrape(record bool) {
 	reader.Comment = '#'
 
 	// Create a CSV writer to print rows in CSV format
-	// csvWriter := csv.NewWriter(os.Stdout)
-	// defer csvWriter.Flush()
+	csvWriter := csv.NewWriter(os.Stdout)
+	defer csvWriter.Flush()
 
 	rows, servers := 0, 0
 loop:
@@ -445,7 +446,7 @@ loop:
 			if _, ok := err.(*csv.ParseError); ok {
 				utilruntime.HandleError(fmt.Errorf("can't read CSV: %v", err))
 				e.csvParseFailures.Inc()
-				panic("xxx")
+				// panic("xxx")
 				continue loop
 			}
 			utilruntime.HandleError(fmt.Errorf("unexpected error while reading CSV: %v", err))
@@ -454,15 +455,15 @@ loop:
 		}
 
 		// Debugging: Print the row in CSV format
-		// csvWriter.Write(row)
-		// csvWriter.Flush()
-		// fmt.Println()
+		csvWriter.Write(row)
+		csvWriter.Flush()
+		fmt.Println()
 
 		// consider ourselves broken, and refuse to parse anything else
 		if len(row) < expectedCsvFieldCount {
 			utilruntime.HandleError(fmt.Errorf("wrong CSV field count in metrics row %d: %d vs. %d", rows, len(row), expectedCsvFieldCount))
 			e.csvParseFailures.Inc()
-			panic("xxx")
+			// panic("xxx")
 			return
 		}
 
