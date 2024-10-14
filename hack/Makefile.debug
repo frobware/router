@@ -3,16 +3,22 @@
 export GOOS=linux
 
 REGISTRY ?= quay.io
-IMAGE ?= openshift/openshift-router
-TAG ?= latest
+IMAGE ?= amcdermo/openshift-router-ocpbugs40850-dev
+# IMAGE = amcdermo/openshift-router-ocpbugs40850@sha256:211cd8ed68a01405c722575c209eb7d3f565f6ec92b714f2158a8f63de47513f
+
+#TAG ?= PR626SEP23
+#TAG = @sha256:211cd8ed68a01405c722575c209eb7d3f565f6ec92b714f2158a8f63de47513f
+# TAG =
+
+# podman pull quay.io/amcdermo/openshift-router-ocpbugs40850@sha256:211cd8ed68a01405c722575c209eb7d3f565f6ec92b714f2158a8f63de47513f
 
 new-openshift-router-image:
 	GO111MODULE=on CGO_ENABLED=0 GOFLAGS=-mod=vendor go build -o openshift-router -gcflags=all="-N -l" ./cmd/openshift-router
-	imagebuilder -t $(IMAGE):$(TAG) -f hack/Dockerfile.debug .
+	podman build -t $(IMAGE):$(TAG) -f hack/Dockerfile.debug .
 
 push:
-	docker tag $(IMAGE):$(TAG) $(REGISTRY)/$(IMAGE):$(TAG)
-	docker push $(REGISTRY)/$(IMAGE):$(TAG)
+	podman tag $(IMAGE):$(TAG) $(REGISTRY)/$(IMAGE):$(TAG)
+	podman push $(REGISTRY)/$(IMAGE):$(TAG)
 
 set-image:
 	oc scale --replicas 0 -n openshift-cluster-version deployments/cluster-version-operator

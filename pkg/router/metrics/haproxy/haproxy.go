@@ -427,10 +427,16 @@ func (e *Exporter) scrape(record bool) {
 	reader.TrailingComma = true
 	reader.Comment = '#'
 
+	// Create a CSV writer to print rows in CSV format
+	// csvWriter := csv.NewWriter(os.Stdout)
+	// defer csvWriter.Flush()
+
 	rows, servers := 0, 0
 loop:
 	for {
 		row, err := reader.Read()
+		// fmt.Printf("Row %d has %d fields\n", rows, len(row))
+
 		switch err {
 		case nil:
 		case io.EOF:
@@ -439,6 +445,7 @@ loop:
 			if _, ok := err.(*csv.ParseError); ok {
 				utilruntime.HandleError(fmt.Errorf("can't read CSV: %v", err))
 				e.csvParseFailures.Inc()
+				panic("xxx")
 				continue loop
 			}
 			utilruntime.HandleError(fmt.Errorf("unexpected error while reading CSV: %v", err))
@@ -446,10 +453,16 @@ loop:
 			break loop
 		}
 
+		// Debugging: Print the row in CSV format
+		// csvWriter.Write(row)
+		// csvWriter.Flush()
+		// fmt.Println()
+
 		// consider ourselves broken, and refuse to parse anything else
 		if len(row) < expectedCsvFieldCount {
 			utilruntime.HandleError(fmt.Errorf("wrong CSV field count in metrics row %d: %d vs. %d", rows, len(row), expectedCsvFieldCount))
 			e.csvParseFailures.Inc()
+			panic("xxx")
 			return
 		}
 
